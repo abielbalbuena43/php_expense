@@ -1,9 +1,18 @@
 <?php
+// Start session only if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Redirect to login if user is not logged in, but allow login page
+$current_page = basename($_SERVER['PHP_SELF']);
+if (!isset($_SESSION['user_id']) && $current_page != 'login.php') {
+    header("Location: login.php");
+    exit();
+}
+
 // Include local connection.php (inside the same folder)
 include "connection.php";
-
-// Get the current page name
-$current_page = basename($_SERVER['PHP_SELF']);
 
 // Get username from session or default to Guest
 $username = isset($_SESSION['username']) ? $_SESSION['username'] : "Guest";
@@ -63,6 +72,10 @@ $status = "Active";
         <li class="<?php echo ($current_page == 'expenses.php') ? 'active' : ''; ?>">
             <a href="expenses.php"><i class="icon icon-inbox"></i><span>Expenses</span></a>
         </li>
+
+        <li class="<?php echo ($current_page == 'payees.php') ? 'active' : ''; ?>">
+            <a href="payees.php"><i class="icon icon-inbox"></i><span>Payees</span></a>
+        </li>
     </ul>
 </div>
 
@@ -74,4 +87,3 @@ $status = "Active";
         </button>
     </form>
 </div>
-
