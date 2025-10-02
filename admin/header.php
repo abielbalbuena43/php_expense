@@ -76,6 +76,18 @@ $status = "Active";
         <li class="<?php echo ($current_page == 'payees.php') ? 'active' : ''; ?>">
             <a href="payees.php"><i class="icon icon-inbox"></i><span>Payees</span></a>
         </li>
+
+        <li class="<?php echo ($current_page == 'categories.php') ? 'active' : ''; ?>">
+            <a href="categories.php"><i class="icon icon-inbox"></i><span>Categories</span></a>
+        </li>
+
+        <li class="<?php echo ($current_page == 'companies.php') ? 'active' : ''; ?>">
+            <a href="companies.php"><i class="icon icon-inbox"></i><span>Companies</span></a>
+        </li>
+
+        <li class="<?php echo ($current_page == 'users.php') ? 'active' : ''; ?>">
+            <a href="users.php"><i class="icon icon-inbox"></i><span>Users</span></a>
+        </li>
     </ul>
 </div>
 
