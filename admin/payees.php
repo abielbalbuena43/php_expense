@@ -32,7 +32,7 @@ $result = $conn->query($sql);
         <!-- Action Button -->
         <div class="row-fluid">
             <div class="span12">
-                <a href="payee_new.php" class="btn btn-success" style="margin-bottom:15px;">
+                <a href="payees_new.php" class="btn btn-success" style="margin-bottom:15px;">
                     <i class="icon-plus"></i> Add New Payee
                 </a>
             </div>
@@ -70,8 +70,8 @@ $result = $conn->query($sql);
                                             <td><?php echo htmlspecialchars($row['payee_address2']); ?></td>
                                             <td><?php echo date('M d, Y', strtotime($row['payee_created_at'])); ?></td>
                                             <td style="white-space: nowrap;">
-                                                <a href="payee_view.php?id=<?php echo $row['payee_id']; ?>" class="btn btn-info btn-mini">View</a>
-                                                <a href="payee_delete.php?id=<?php echo $row['payee_id']; ?>" class="btn btn-danger btn-mini" onclick="return confirm('Are you sure you want to delete this payee?');">Delete</a>
+                                                <a href="payees_view.php?id=<?php echo $row['payee_id']; ?>" class="btn btn-info btn-mini">View</a>
+                                                <a href="payees_delete.php?id=<?php echo $row['payee_id']; ?>" class="btn btn-danger btn-mini" onclick="return confirm('Are you sure you want to delete this payee?');">Delete</a>
                                             </td>
                                         </tr>
                                     <?php endwhile; ?>
