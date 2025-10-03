@@ -27,7 +27,7 @@ $result = $conn->query($sql);
         <!-- Action Button -->
         <div class="row-fluid">
             <div class="span12">
-                <a href="category_new.php" class="btn btn-success" style="margin-bottom:15px;">
+                <a href="categories_new.php" class="btn btn-success" style="margin-bottom:15px;">
                     <i class="icon-plus"></i> Add New Category
                 </a>
             </div>
@@ -55,8 +55,8 @@ $result = $conn->query($sql);
                                             <td><?php echo htmlspecialchars($row['category_name']); ?></td>
                                             <td><?php echo date('M d, Y', strtotime($row['category_created_at'])); ?></td>
                                             <td style="white-space: nowrap;">
-                                                <a href="category_view.php?id=<?php echo $row['category_id']; ?>" class="btn btn-info btn-mini">View</a>
-                                                <a href="category_delete.php?id=<?php echo $row['category_id']; ?>" class="btn btn-danger btn-mini" onclick="return confirm('Are you sure you want to delete this category?');">Delete</a>
+                                                <a href="categories_view.php?id=<?php echo $row['category_id']; ?>" class="btn btn-info btn-mini">View</a>
+                                                <a href="categories_delete.php?id=<?php echo $row['category_id']; ?>" class="btn btn-danger btn-mini" onclick="return confirm('Are you sure you want to delete this category?');">Delete</a>
                                             </td>
                                         </tr>
                                     <?php endwhile; ?>
