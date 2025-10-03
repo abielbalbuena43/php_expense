@@ -7,9 +7,9 @@ $sql = "
     SELECT 
         company_id,
         company_name,
-        company_created_at
+        city
     FROM companies
-    ORDER BY company_created_at DESC
+    ORDER BY company_name ASC
 ";
 $result = $conn->query($sql);
 ?>
@@ -27,7 +27,7 @@ $result = $conn->query($sql);
         <!-- Action Button -->
         <div class="row-fluid">
             <div class="span12">
-                <a href="company_new.php" class="btn btn-success" style="margin-bottom:15px;">
+                <a href="companies_new.php" class="btn btn-success" style="margin-bottom:15px;">
                     <i class="icon-plus"></i> Add New Company
                 </a>
             </div>
@@ -43,7 +43,7 @@ $result = $conn->query($sql);
                                 <tr>
                                     <th>ID</th>
                                     <th>Company Name</th>
-                                    <th>Created At</th>
+                                    <th>City</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -53,10 +53,10 @@ $result = $conn->query($sql);
                                         <tr>
                                             <td><?php echo $row['company_id']; ?></td>
                                             <td><?php echo htmlspecialchars($row['company_name']); ?></td>
-                                            <td><?php echo date('M d, Y', strtotime($row['company_created_at'])); ?></td>
+                                            <td><?php echo htmlspecialchars($row['city']); ?></td>
                                             <td style="white-space: nowrap;">
-                                                <a href="company_view.php?id=<?php echo $row['company_id']; ?>" class="btn btn-info btn-mini">View</a>
-                                                <a href="company_delete.php?id=<?php echo $row['company_id']; ?>" class="btn btn-danger btn-mini" onclick="return confirm('Are you sure you want to delete this company?');">Delete</a>
+                                                <a href="companies_view.php?id=<?php echo $row['company_id']; ?>" class="btn btn-info btn-mini">View</a>
+                                                <a href="companies_delete.php?id=<?php echo $row['company_id']; ?>" class="btn btn-danger btn-mini" onclick="return confirm('Are you sure you want to delete this company?');">Delete</a>
                                             </td>
                                         </tr>
                                     <?php endwhile; ?>
