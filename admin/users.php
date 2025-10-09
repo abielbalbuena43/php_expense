@@ -28,7 +28,7 @@ $result = $conn->query($sql);
         <!-- Action Button -->
         <div class="row-fluid">
             <div class="span12">
-                <a href="user_new.php" class="btn btn-success" style="margin-bottom:15px;">
+                <a href="users_new.php" class="btn btn-success" style="margin-bottom:15px;">
                     <i class="icon-plus"></i> Create New User
                 </a>
             </div>
@@ -60,8 +60,8 @@ $result = $conn->query($sql);
                                             <td><?php echo htmlspecialchars($row['role']); ?></td>
                                             <td><?php echo date('M d, Y H:i', strtotime($row['created_at'])); ?></td>
                                             <td style="white-space: nowrap;">
-                                                <a href="user_view.php?id=<?php echo $row['user_id']; ?>" class="btn btn-info btn-mini">View</a>
-                                                <a href="user_delete.php?id=<?php echo $row['user_id']; ?>" class="btn btn-danger btn-mini" onclick="return confirm('Are you sure you want to delete this user?');">Delete</a>
+                                                <a href="users_view.php?id=<?php echo $row['user_id']; ?>" class="btn btn-info btn-mini">View</a>
+                                                <a href="users_delete.php?id=<?php echo $row['user_id']; ?>" class="btn btn-danger btn-mini" onclick="return confirm('Are you sure you want to delete this user?');">Delete</a>
                                             </td>
                                         </tr>
                                     <?php endwhile; ?>

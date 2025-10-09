@@ -88,6 +88,17 @@ $status = "Active";
         <li class="<?php echo ($current_page == 'users.php') ? 'active' : ''; ?>">
             <a href="users.php"><i class="icon icon-inbox"></i><span>Users</span></a>
         </li>
+
+        <!-- Special Fields Dropdown -->
+        <li class="submenu <?php echo (in_array($current_page, ['resellers.php','end_users.php','products.php'])) ? 'active open' : ''; ?>">
+            <a href="#"><i class="icon icon-tags"></i> <span>Special Fields</span> <span class="label label-important"></span></a>
+            <ul>
+                <li><a href="resellers.php">Resellers</a></li>
+                <li><a href="end_users.php">End Users</a></li>
+                <li><a href="products.php">Products</a></li>
+            </ul>
+        </li>
+
     </ul>
 </div>
 

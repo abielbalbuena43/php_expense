@@ -1,32 +1,29 @@
 <?php
 session_start();
-include "../admin/connection.php"; // or adjust the path if needed
+include "../admin/connection.php";
 
-if (isset($_POST['login'])) {
-    // Use $conn, not $link
+if (isset($_POST['register'])) {
     $username = mysqli_real_escape_string($conn, $_POST['username']);
     $password = mysqli_real_escape_string($conn, $_POST['password']);
+    $fullname = mysqli_real_escape_string($conn, $_POST['fullname']);
 
-    // Query the users table
-    $query = "SELECT * FROM users WHERE username = '$username'";
-    $result = mysqli_query($conn, $query);
+    // Check if username already exists
+    $check_query = "SELECT * FROM users WHERE username = '$username'";
+    $check_result = mysqli_query($conn, $check_query);
 
-    if ($result && mysqli_num_rows($result) > 0) {
-        $user = mysqli_fetch_assoc($result);
-
-        // For now, plain text password check
-        if ($user['password'] === $password) {
-            $_SESSION['user_id'] = $user['user_id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['role'] = $user['role'];
-
-            header("Location: dashboard.php");
+    if ($check_result && mysqli_num_rows($check_result) > 0) {
+        $error = "Username already taken.";
+    } else {
+        // Insert new user (default role = admin)
+        $query = "INSERT INTO users (username, password, fullname, role)
+                  VALUES ('$username', '$password', '$fullname', 'admin')";
+        if (mysqli_query($conn, $query)) {
+            $_SESSION['success'] = "Registration successful. Please login.";
+            header("Location: login.php");
             exit();
         } else {
-            $error = "Incorrect password.";
+            $error = "Error registering user.";
         }
-    } else {
-        $error = "Incorrect username.";
     }
 }
 ?>
@@ -34,7 +31,7 @@ if (isset($_POST['login'])) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Login - PHP Expense Tracker</title>
+    <title>Register - PHP Expense Tracker</title>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <link rel="stylesheet" href="css/bootstrap.min.css"/>
@@ -77,8 +74,8 @@ if (isset($_POST['login'])) {
 </head>
 <body>
 <div id="loginbox">
-    <form method="post" action="login.php">
-        <div class="control-group normal_text"><h3>Login Page</h3></div>
+    <form method="post" action="register.php">
+        <div class="control-group normal_text"><h3>Register</h3></div>
         <div class="control-group normal_text"><h4>Expense Tracker</h4></div>
 
         <div class="control-group">
@@ -97,13 +94,17 @@ if (isset($_POST['login'])) {
             </div>
         </div>
 
-        <div class="form-actions">
-            <button type="submit" name="login" class="btn btn-success">Login</button>
+        <div class="control-group">
+            <div class="controls">
+                <div class="main_input_box">
+                    <input type="text" name="fullname" placeholder="Full Name" required/>
+                </div>
+            </div>
         </div>
 
         <div class="form-actions">
-            <button type="submit" name="login" class="btn btn-success">Login</button>
-            <a href="register.php" class="btn btn-info" style="margin-left:10px;">Register</a>
+            <button type="submit" name="register" class="btn btn-success">Register</button>
+            <a href="login.php" class="btn btn-secondary" style="margin-left:10px;">Back to Login</a>
         </div>
 
         <?php if (isset($error)) echo "<p class='error-message'>$error</p>"; ?>
