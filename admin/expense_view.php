@@ -17,12 +17,16 @@ $query = "
            c.company_name, 
            p.payee_name, 
            cat.category_name, 
-           r.reseller_name
+           r.reseller_name,
+           eu.end_user_name,
+           pr.product_name
     FROM expenses e
     INNER JOIN companies c ON e.expense_company_id = c.company_id
     INNER JOIN payees p ON e.expense_payee_id = p.payee_id
     INNER JOIN expense_categories cat ON e.expense_category_id = cat.category_id
     LEFT JOIN resellers r ON e.expense_reseller_id = r.reseller_id
+    LEFT JOIN expense_end_users eu ON e.expense_user_id = eu.end_user_id
+    LEFT JOIN expense_products pr ON e.expense_product_id = pr.product_id
     WHERE e.expense_id = '$expense_id'
     LIMIT 1
 ";
@@ -89,6 +93,22 @@ $expense = mysqli_fetch_assoc($result);
                                     <input type="text" class="span11" value="<?= htmlspecialchars($expense['reseller_name'] ?? 'None') ?>" disabled>
                                 </div>
                             </div>
+
+                            <!-- End User -->
+                                <div class="control-group">
+                                    <label class="control-label">End User:</label>
+                                    <div class="controls">
+                                        <input type="text" class="span11" value="<?= htmlspecialchars($expense['end_user_name'] ?? 'None') ?>" disabled>
+                                    </div>
+                                </div>
+
+                                <!-- Product -->
+                                <div class="control-group">
+                                    <label class="control-label">Product:</label>
+                                    <div class="controls">
+                                        <input type="text" class="span11" value="<?= htmlspecialchars($expense['product_name'] ?? 'None') ?>" disabled>
+                                    </div>
+                                </div>
 
                             <!-- OR Number -->
                             <div class="control-group">
@@ -195,6 +215,16 @@ $expense = mysqli_fetch_assoc($result);
                                 <label class="control-label">Total Receipt Amount:</label>
                                 <div class="controls">
                                     <input type="text" class="span11" value="<?= number_format($expense['expense_total_receipt_amount'], 2) ?>" disabled>
+                                </div>
+                            </div>
+
+                            <!-- Taxable (Net of VAT) -->
+                            <div class="control-group">
+                                <label class="control-label">Taxable (Net of VAT):</label>
+                                <div class="controls">
+                                    <input type="text" class="span11" 
+                                        value="<?= number_format($expense['expense_taxable_net_vat'], 2) ?>" 
+                                        disabled>
                                 </div>
                             </div>
 

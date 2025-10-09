@@ -16,6 +16,8 @@ $companies = mysqli_query($conn, "SELECT company_id, company_name FROM companies
 $payees = mysqli_query($conn, "SELECT payee_id, payee_name FROM payees ORDER BY payee_name ASC");
 $categories = mysqli_query($conn, "SELECT category_id, category_name FROM expense_categories ORDER BY category_name ASC");
 $resellers = mysqli_query($conn, "SELECT reseller_id, reseller_name FROM resellers ORDER BY reseller_name ASC");
+$end_users = mysqli_query($conn, "SELECT end_user_id, end_user_name FROM expense_end_users ORDER BY end_user_name ASC");
+$products = mysqli_query($conn, "SELECT product_id, product_name FROM expense_products ORDER BY product_name ASC");
 
 // Fetch current expense record
 $expense_query = mysqli_query($conn, "SELECT * FROM expenses WHERE expense_id = '$expense_id' LIMIT 1");
@@ -52,28 +54,31 @@ if (isset($_POST['update_expense'])) {
 
     // Update query
     $query = "
-        UPDATE expenses SET
-            expense_company_id = '$company_id',
-            expense_payee_id = '$payee_id',
-            expense_category_id = '$category_id',
-            expense_reseller_id = " . ($reseller_id ? "'$reseller_id'" : "NULL") . ",
-            expense_or_number = '$or_number',
-            expense_date = '$expense_date',
-            expense_gross_taxable = '$gross_taxable',
-            expense_service_charge = '$service_charge',
-            expense_services = '$services',
-            expense_capital_goods = '$capital_goods',
-            expense_goods_other_than_capital = '$goods_other',
-            expense_exempt = '$exempt',
-            expense_zero_rated = '$zero_rated',
-            expense_vat_rate = '$vat_rate',
-            expense_total_purchases = '$total_purchases',
-            expense_total_input_tax = '$total_input_tax',
-            expense_total_receipt_amount = '$total_receipt_amount',
-            expense_remarks = '$remarks',
-            expense_updated_at = NOW()
-        WHERE expense_id = '$expense_id'
-    ";
+    UPDATE expenses SET
+        expense_company_id = '$company_id',
+        expense_payee_id = '$payee_id',
+        expense_category_id = '$category_id',
+        expense_reseller_id = " . ($reseller_id ? "'$reseller_id'" : "NULL") . ",
+        expense_user_id = " . (!empty($_POST['expense_user_id']) ? "'".mysqli_real_escape_string($conn, $_POST['expense_user_id'])."'" : "NULL") . ",
+        expense_product_id = " . (!empty($_POST['expense_product_id']) ? "'".mysqli_real_escape_string($conn, $_POST['expense_product_id'])."'" : "NULL") . ",
+        expense_or_number = '$or_number',
+        expense_date = '$expense_date',
+        expense_gross_taxable = '$gross_taxable',
+        expense_service_charge = '$service_charge',
+        expense_services = '$services',
+        expense_capital_goods = '$capital_goods',
+        expense_goods_other_than_capital = '$goods_other',
+        expense_exempt = '$exempt',
+        expense_zero_rated = '$zero_rated',
+        expense_taxable_net_vat = '$taxable_net_vat',
+        expense_vat_rate = '$vat_rate',
+        expense_total_purchases = '$total_purchases',
+        expense_total_input_tax = '$total_input_tax',
+        expense_total_receipt_amount = '$total_receipt_amount',
+        expense_remarks = '$remarks',
+        expense_updated_at = NOW()
+    WHERE expense_id = '$expense_id'
+";
 
     if (mysqli_query($conn, $query)) {
         $_SESSION['alert'] = "success_update";
@@ -166,6 +171,36 @@ unset($_SESSION['alert']);
                                         <?php while ($row = mysqli_fetch_assoc($resellers)) { ?>
                                             <option value="<?= $row['reseller_id'] ?>" <?= $row['reseller_id'] == $expense['expense_reseller_id'] ? 'selected' : '' ?>>
                                                 <?= htmlspecialchars($row['reseller_name']) ?>
+                                            </option>
+                                        <?php } ?>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- End User -->
+                            <div class="control-group">
+                                <label class="control-label">End User:</label>
+                                <div class="controls">
+                                    <select name="expense_user_id" class="span11">
+                                        <option value="">None</option>
+                                        <?php while ($row = mysqli_fetch_assoc($end_users)) { ?>
+                                            <option value="<?= $row['end_user_id'] ?>" <?= $row['end_user_id'] == $expense['expense_user_id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($row['end_user_name']) ?>
+                                            </option>
+                                        <?php } ?>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Product -->
+                            <div class="control-group">
+                                <label class="control-label">Product:</label>
+                                <div class="controls">
+                                    <select name="expense_product_id" class="span11">
+                                        <option value="">None</option>
+                                        <?php while ($row = mysqli_fetch_assoc($products)) { ?>
+                                            <option value="<?= $row['product_id'] ?>" <?= $row['product_id'] == $expense['expense_product_id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($row['product_name']) ?>
                                             </option>
                                         <?php } ?>
                                     </select>
@@ -279,6 +314,14 @@ unset($_SESSION['alert']);
                                 <div class="controls">
                                     <input type="number" class="span11" id="expense_total_receipt_amount" readonly
                                            value="<?= htmlspecialchars($expense['expense_total_receipt_amount']) ?>">
+                                </div>
+                            </div>
+
+                            <div class="control-group">
+                                <label class="control-label">Taxable (Net of VAT):</label>
+                                <div class="controls">
+                                    <input type="number" class="span11" id="expense_taxable_net_vat" readonly
+                                        value="<?= htmlspecialchars($expense['expense_taxable_net_vat']) ?>">
                                 </div>
                             </div>
 

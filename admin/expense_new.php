@@ -3,11 +3,13 @@ session_start();
 include "header.php"; 
 include "connection.php";
 
-// Fetch companies, payees, categories, resellers
+// Fetch companies, payees, categories, resellers, end users, products
 $companies = mysqli_query($conn, "SELECT company_id, company_name FROM companies ORDER BY company_name ASC");
 $payees = mysqli_query($conn, "SELECT payee_id, payee_name FROM payees ORDER BY payee_name ASC");
 $categories = mysqli_query($conn, "SELECT category_id, category_name FROM expense_categories ORDER BY category_name ASC");
 $resellers = mysqli_query($conn, "SELECT reseller_id, reseller_name FROM resellers ORDER BY reseller_name ASC");
+$end_users = mysqli_query($conn, "SELECT end_user_id, end_user_name FROM expense_end_users ORDER BY end_user_name ASC");
+$products = mysqli_query($conn, "SELECT product_id, product_name FROM expense_products ORDER BY product_name ASC");
 
 // Handle form submission
 if (isset($_POST['submit_expense'])) {
@@ -15,6 +17,8 @@ if (isset($_POST['submit_expense'])) {
     $payee_id = mysqli_real_escape_string($conn, $_POST['expense_payee_id']);
     $category_id = mysqli_real_escape_string($conn, $_POST['expense_category_id']);
     $reseller_id = !empty($_POST['expense_reseller_id']) ? mysqli_real_escape_string($conn, $_POST['expense_reseller_id']) : NULL;
+    $user_id = !empty($_POST['expense_user_id']) ? mysqli_real_escape_string($conn, $_POST['expense_user_id']) : NULL;
+    $product_id = !empty($_POST['expense_product_id']) ? mysqli_real_escape_string($conn, $_POST['expense_product_id']) : NULL;
     $or_number = mysqli_real_escape_string($conn, $_POST['expense_or_number']);
     $expense_date = mysqli_real_escape_string($conn, $_POST['expense_date']);
     $remarks = mysqli_real_escape_string($conn, $_POST['expense_remarks']);
@@ -42,6 +46,8 @@ if (isset($_POST['submit_expense'])) {
             expense_payee_id,
             expense_category_id,
             expense_reseller_id,
+            expense_user_id,
+            expense_product_id,
             expense_or_number,
             expense_date,
             expense_gross_taxable,
@@ -63,6 +69,8 @@ if (isset($_POST['submit_expense'])) {
             '$payee_id',
             '$category_id',
             " . ($reseller_id ? "'$reseller_id'" : "NULL") . ",
+            " . ($user_id ? "'$user_id'" : "NULL") . ",
+            " . ($product_id ? "'$product_id'" : "NULL") . ",
             '$or_number',
             '$expense_date',
             '$gross_taxable',
@@ -174,6 +182,32 @@ unset($_SESSION['alert']);
                                     </select>
                                 </div>
                             </div>
+
+                            <!-- End User (Optional) -->
+                                <div class="control-group">
+                                    <label class="control-label">End User (Optional):</label>
+                                    <div class="controls">
+                                        <select name="expense_user_id" class="span11">
+                                        <option value="" selected>None</option>
+                                            <?php while ($row = mysqli_fetch_assoc($end_users)) { ?>
+                                                <option value="<?= $row['end_user_id'] ?>"><?= $row['end_user_name'] ?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Product (Optional) -->
+                                <div class="control-group">
+                                    <label class="control-label">Product (Optional):</label>
+                                    <div class="controls">
+                                        <select name="expense_product_id" class="span11">
+                                            <option value="" selected>None</option>
+                                            <?php while ($row = mysqli_fetch_assoc($products)) { ?>
+                                                <option value="<?= $row['product_id'] ?>"><?= $row['product_name'] ?></option>
+                                            <?php } ?>
+                                        </select>
+                                    </div>
+                                </div>
 
                             <!-- OR Number -->
                             <div class="control-group">
