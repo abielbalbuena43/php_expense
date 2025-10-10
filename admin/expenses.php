@@ -1,13 +1,42 @@
 <?php
+session_start();  // For CSRF token
 include "connection.php";
 include "header.php";
 
-// Fetch all expense records with related data
+// Handle delete (POST only, with CSRF)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+    $deleteId = intval($_POST['delete_id']);
+    $deleteStmt = $conn->prepare("DELETE FROM expenses WHERE expense_id = ?");
+    $deleteStmt->bind_param("i", $deleteId);
+    if ($deleteStmt->execute()) {
+        $_SESSION['alert'] = 'success';  // For display in header/footer if needed
+    } else {
+        $_SESSION['alert'] = 'error';
+    }
+    $deleteStmt->close();
+    // Preserve filter state (including all=0)
+    $redirect = $_SERVER['PHP_SELF'];
+    if (isset($_GET['month'])) $redirect .= '?month=' . intval($_GET['month']);
+    if (isset($_GET['year'])) $redirect .= (strpos($redirect, '?') !== false ? '&' : '?') . 'year=' . intval($_GET['year']);
+    header("Location: $redirect");
+    exit();
+}
+
+// Generate CSRF token
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Fetch expense records (filtered by transaction dates OR all if cleared)
+$selectedMonth = intval($_GET['month'] ?? date('m'));  // Default to current if no param
+$selectedYear = intval($_GET['year'] ?? date('Y'));   // Default to current if no param
+
 $sql = "
     SELECT 
         e.expense_id,
         e.expense_or_number,
         e.expense_date,
+        e.expense_total_receipt_amount,  -- For amount column
         c.company_name,
         p.payee_name,
         cat.category_name
@@ -15,43 +44,102 @@ $sql = "
     INNER JOIN companies c ON e.expense_company_id = c.company_id
     INNER JOIN payees p ON e.expense_payee_id = p.payee_id
     INNER JOIN expense_categories cat ON e.expense_category_id = cat.category_id
-    ORDER BY e.expense_date DESC
 ";
-$result = $conn->query($sql);
+
+$params = [];
+$types = "";
+if ($selectedMonth > 0 && $selectedYear > 0) {
+    $sql .= " WHERE MONTH(e.expense_date) = ? AND YEAR(e.expense_date) = ?";
+    $params = [$selectedMonth, $selectedYear];
+    $types = "ii";
+}
+
+$sql .= " ORDER BY e.expense_date DESC, e.expense_id DESC LIMIT 100";  // Limit for performance (all or filtered)
+
+$stmt = $conn->prepare($sql);
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+$stmt->execute();
+$result = $stmt->get_result();
+$stmt->close();
+
+// Format selected period label
+if ($selectedMonth > 0 && $selectedYear > 0) {
+    $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedYear));
+    $viewingLabel = "Viewing Expenses for: $selectedPeriodLabel";
+} else {
+    $viewingLabel = "Viewing All Expenses";
+}
 ?>
 
 <div id="content">
     <div id="content-header">
         <div id="breadcrumb">
             <a href="dashboard.php" class="tip-bottom"><i class="icon-home"></i> Home</a>
+            <a href="#" class="current">Expenses</a>
         </div>
     </div>
 
     <div class="container-fluid">
 
-        <!-- Action Button -->
+        <!-- Action Button & Filter (uniform with dashboard) -->
         <div class="row-fluid">
             <div class="span12">
                 <a href="expense_new.php" class="btn btn-success" style="margin-bottom:15px;">
                     <i class="icon-plus"></i> Create New Expense
                 </a>
+                
+                <!-- Small Filter Dropdown -->
+                <div class="filter-section" style="display: inline-block; margin-left: 20px; vertical-align: middle;">
+                    <form method="get" id="filterForm" style="display: inline;">
+                        <label style="margin-right: 10px; font-weight: bold;">Filter by Transaction Month:</label>
+                        <select name="month" style="margin-right: 5px; padding: 5px;">
+                            <option value="0" <?= ($selectedMonth == 0) ? 'selected' : '' ?>>All Months</option>
+                            <?php 
+                            $months = [
+                                '01' => 'January', '02' => 'February', '03' => 'March', '04' => 'April', 
+                                '05' => 'May', '06' => 'June', '07' => 'July', '08' => 'August', 
+                                '09' => 'September', '10' => 'October', '11' => 'November', '12' => 'December'
+                            ];
+                            foreach ($months as $val => $name) {
+                                $selected = ($val == $selectedMonth) ? 'selected' : '';
+                                echo "<option value='$val' $selected>$name</option>";
+                            }
+                            ?>
+                        </select>
+                        <select name="year" style="margin-right: 10px; padding: 5px;">
+                            <option value="0" <?= ($selectedYear == 0) ? 'selected' : '' ?>>All Years</option>
+                            <?php 
+                            $currentYear = date('Y');
+                            for ($y = $currentYear; $y >= $currentYear - 9; $y--) {
+                                $selected = ($y == $selectedYear) ? 'selected' : '';
+                                echo "<option value='$y' $selected>$y</option>";
+                            }
+                            ?>
+                        </select>
+                        <button type="submit" class="btn btn-primary" style="padding: 5px 10px;">Apply Filter</button>
+                    </form>
+                    <span style="margin-left: 10px; font-weight: bold;"><?= htmlspecialchars($viewingLabel) ?></span>
+                </div>
             </div>
         </div>
 
-        <!-- Expenses Table -->
+        <!-- Expenses Table (uniform with dashboard.css) -->
         <div class="row-fluid">
             <div class="span12">
                 <div class="widget-box">
                     <div class="widget-content nopadding">
-                        <table class="table table-bordered table-striped" id="expensesTable">
+                        <table class="table table-bordered table-striped" id="expensesTable">  <!-- Bootstrap for DataTables base -->
                             <thead>
                                 <tr>
                                     <th>ID</th>
                                     <th>OR Number</th>
-                                    <th>Date</th>
+                                    <th>Date</th>  <!-- Transaction date (expense_date) -->
                                     <th>Company</th>
                                     <th>Payee</th>
                                     <th>Category</th>
+                                    <th>Amount</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -65,15 +153,27 @@ $result = $conn->query($sql);
                                             <td><?php echo htmlspecialchars($row['company_name']); ?></td>
                                             <td><?php echo htmlspecialchars($row['payee_name']); ?></td>
                                             <td><?php echo htmlspecialchars($row['category_name']); ?></td>
+                                            <td>₱<?php echo number_format($row['expense_total_receipt_amount'], 2); ?></td>
                                             <td style="white-space: nowrap;">
                                                 <a href="expense_view.php?id=<?php echo $row['expense_id']; ?>" class="btn btn-info btn-mini">View</a>
-                                                <a href="expense_delete.php?id=<?php echo $row['expense_id']; ?>" class="btn btn-danger btn-mini" onclick="return confirm('Are you sure you want to delete this expense?');">Delete</a>
+                                                <!-- POST Delete Form -->
+                                                <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this expense?');">
+                                                    <input type="hidden" name="delete_id" value="<?php echo $row['expense_id']; ?>">
+                                                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+                                                    <button type="submit" class="btn btn-danger btn-mini">Delete</button>
+                                                </form>
                                             </td>
                                         </tr>
                                     <?php endwhile; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="7" style="text-align:center;">No expenses found.</td>
+                                        <td colspan="8" style="text-align:center; padding: 20px;">
+                                            <?php if ($selectedMonth > 0 && $selectedYear > 0): ?>
+                                                No expenses found for the selected period.
+                                            <?php else: ?>
+                                                No expenses found.
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -90,8 +190,81 @@ $result = $conn->query($sql);
 
 <script>
 $(document).ready(function() {
+    // Clear Filter functionality
+    $('#clearFilter').click(function() {
+        $('select[name="month"]').val(0);
+        $('select[name="year"]').val(0);
+        $('#filterForm').submit();  // Submit to reload with all
+    });
+
     $('#expensesTable').DataTable({
-        "scrollX": true
+        "scrollX": true,
+        "pageLength": 25,  // Show 25 rows per page for better UX
+        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]  // Pagination options
     });
 });
 </script>
+
+<style>
+/* Inline overrides to apply dashboard.css uniformity (add to header.php or external if preferred) */
+#expensesTable {
+    width: 100% !important;  /* Full width */
+    background-color: #ffffff;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border-radius: 12px;  /* Matches your CSS rounded corners */
+}
+
+#expensesTable thead th {
+    background-color: #115486 !important;  /* Blue header */
+    color: #ffffff !important;
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
+    border-bottom: 2px solid #ddd;
+    padding: 14px;
+}
+
+#expensesTable tbody td {
+    padding: 12px;
+    font-size: 13px;
+    color: #000000;
+    border-bottom: 1px solid #ddd;
+    vertical-align: middle;
+}
+
+#expensesTable tbody tr:nth-child(odd) {
+    background-color: #f0f0f0;
+}
+
+#expensesTable tbody tr:nth-child(even) {
+    background-color: #ffffff;
+}
+
+#expensesTable tbody tr:hover {
+    background-color: #d6d6d6;
+}
+
+/* Borders and rounding (from your CSS) */
+#expensesTable td, #expensesTable th {
+    border-right: 1px solid #ddd;
+}
+
+#expensesTable th:last-child, #expensesTable td:last-child {
+    border-right: none;
+}
+
+#expensesTable thead tr:first-child th:first-child {
+    border-top-left-radius: 12px;
+}
+
+#expensesTable thead tr:first-child th:last-child {
+    border-top-right-radius: 12px;
+}
+
+/* Global font match */
+body {
+    font-family: 'Arial', sans-serif;
+    font-size: 14px;
+}
+</style>

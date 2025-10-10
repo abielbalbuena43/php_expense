@@ -4,27 +4,27 @@ include "connection.php";
 include "header.php";
 
 // ---------- Metrics ----------
-$currentMonth = date('m');
-$currentYear = date('Y');
+$selectedMonth = intval($_GET['month'] ?? date('m'));
+$selectedYear = intval($_GET['year'] ?? date('Y'));
 
-// Total Expenses (This Month)
+// Total Expenses (Selected Month/Year)
 $totalExpensesQuery = "
     SELECT SUM(expense_total_receipt_amount) AS total 
     FROM expenses 
-    WHERE MONTH(expense_date) = '$currentMonth' 
-      AND YEAR(expense_date) = '$currentYear'
+    WHERE MONTH(expense_date) = '$selectedMonth' 
+      AND YEAR(expense_date) = '$selectedYear'
 ";
 $totalExpensesResult = mysqli_query($conn, $totalExpensesQuery) or die("Error in totalExpensesQuery: " . mysqli_error($conn));
 $totalExpensesRow = mysqli_fetch_assoc($totalExpensesResult);
 $totalExpenses = $totalExpensesRow['total'] ?? 0;
 
-// Top Expense Category (This Month)
+// Top Expense Category (Selected Month/Year)
 $topCategoryQuery = "
     SELECT c.category_name, SUM(e.expense_total_receipt_amount) AS total
     FROM expenses e
     JOIN expense_categories c ON e.expense_category_id = c.category_id
-    WHERE MONTH(e.expense_date) = '$currentMonth' 
-      AND YEAR(e.expense_date) = '$currentYear'
+    WHERE MONTH(e.expense_date) = '$selectedMonth' 
+      AND YEAR(e.expense_date) = '$selectedYear'
     GROUP BY c.category_name
     ORDER BY total DESC
     LIMIT 1
@@ -33,18 +33,18 @@ $topCategoryResult = mysqli_query($conn, $topCategoryQuery) or die("Error in top
 $topCategoryRow = mysqli_fetch_assoc($topCategoryResult);
 $topCategory = $topCategoryRow['category_name'] ?? "None";
 
-// Placeholder Budget Utilization
+// Placeholder Budget Utilization (based on selected total)
 $budgetTotal = 50000; // Example budget amount (make dynamic later)
 $budgetUtilization = $budgetTotal > 0 ? ($totalExpenses / $budgetTotal) * 100 : 0;
 
 // ---------- Chart Data ----------
-// Pie Chart - Expense Breakdown by Category
+// Pie Chart - Expense Breakdown by Category (Selected Month/Year)
 $pieDataQuery = "
     SELECT c.category_name, SUM(e.expense_total_receipt_amount) AS total
     FROM expenses e
     JOIN expense_categories c ON e.expense_category_id = c.category_id
-    WHERE MONTH(e.expense_date) = '$currentMonth' 
-      AND YEAR(e.expense_date) = '$currentYear'
+    WHERE MONTH(e.expense_date) = '$selectedMonth' 
+      AND YEAR(e.expense_date) = '$selectedYear'
     GROUP BY c.category_name
 ";
 $pieResult = mysqli_query($conn, $pieDataQuery) or die("Error in pieDataQuery: " . mysqli_error($conn));
@@ -56,7 +56,7 @@ while ($row = mysqli_fetch_assoc($pieResult)) {
 }
 
 // ---------- Recent Activity ----------
-// Fetch last 5 expenses (latest by created_at)
+// Fetch last 5 expenses (latest by created_at) - unchanged, as per minimal design request
 $recentActivityQuery = "
     SELECT e.expense_id, e.expense_or_number, e.expense_date, e.expense_total_receipt_amount,
            c.company_name, cat.category_name
@@ -67,6 +67,9 @@ $recentActivityQuery = "
     LIMIT 5
 ";
 $recentActivityResult = mysqli_query($conn, $recentActivityQuery) or die("Error in recentActivityQuery: " . mysqli_error($conn));
+
+// Format selected period label
+$selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedYear));
 ?>
 
 <!DOCTYPE html>
@@ -98,10 +101,40 @@ $recentActivityResult = mysqli_query($conn, $recentActivityQuery) or die("Error 
 
     <div class="container-fluid">
 
+        <!-- Small Filter Dropdown (minimal addition above summary) -->
+        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+            <form method="get" style="display: inline-block;">
+                <label style="margin-right: 10px; font-weight: bold;">Filter Total Expenses:</label>
+                <select name="month" style="margin-right: 5px; padding: 5px;">
+                    <?php 
+                    $months = [
+                        '01' => 'January', '02' => 'February', '03' => 'March', '04' => 'April', 
+                        '05' => 'May', '06' => 'June', '07' => 'July', '08' => 'August', 
+                        '09' => 'September', '10' => 'October', '11' => 'November', '12' => 'December'
+                    ];
+                    foreach ($months as $val => $name) {
+                        $selected = ($val == $selectedMonth) ? 'selected' : '';
+                        echo "<option value='$val' $selected>$name</option>";
+                    }
+                    ?>
+                </select>
+                <select name="year" style="margin-right: 10px; padding: 5px;">
+                    <?php 
+                    $currentYear = date('Y');
+                    for ($y = $currentYear; $y >= $currentYear - 9; $y--) {  // Last 10 years
+                        $selected = ($y == $selectedYear) ? 'selected' : '';
+                        echo "<option value='$y' $selected>$y</option>";
+                    }
+                    ?>
+                </select>
+                <button type="submit" style="padding: 5px 10px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">Apply</button>
+            </form>
+        </div>
+
         <!-- Summary Section -->
         <div class="dashboard-summary">
             <div class="summary-box">
-                <h4>TOTAL EXPENSES (THIS MONTH)</h4>
+                <h4>TOTAL EXPENSES (<?= htmlspecialchars($selectedPeriodLabel) ?>)</h4>
                 <p>₱<?= number_format($totalExpenses, 2) ?></p>
             </div>
             <div class="summary-box">
