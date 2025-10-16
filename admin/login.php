@@ -99,10 +99,6 @@ if (isset($_POST['login'])) {
 
         <div class="form-actions">
             <button type="submit" name="login" class="btn btn-success">Login</button>
-        </div>
-
-        <div class="form-actions">
-            <button type="submit" name="login" class="btn btn-success">Login</button>
             <a href="register.php" class="btn btn-info" style="margin-left:10px;">Register</a>
         </div>
 

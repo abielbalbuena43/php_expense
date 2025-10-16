@@ -4,7 +4,6 @@ include "../admin/connection.php";
 
 if (isset($_POST['register'])) {
     $username = mysqli_real_escape_string($conn, $_POST['username']);
-    $password = mysqli_real_escape_string($conn, $_POST['password']);
     $fullname = mysqli_real_escape_string($conn, $_POST['fullname']);
 
     // Check if username already exists
@@ -14,11 +13,20 @@ if (isset($_POST['register'])) {
     if ($check_result && mysqli_num_rows($check_result) > 0) {
         $error = "Username already taken.";
     } else {
+        // Generate a random 10-character password
+        $generated_password = substr(bin2hex(random_bytes(5)), 0, 10);
+
+        // Hash the generated password
+        $hashed_password = password_hash($generated_password, PASSWORD_DEFAULT);
+
         // Insert new user (default role = admin)
         $query = "INSERT INTO users (username, password, fullname, role)
-                  VALUES ('$username', '$password', '$fullname', 'admin')";
+                  VALUES ('$username', '$hashed_password', '$fullname', 'admin')";
+
         if (mysqli_query($conn, $query)) {
-            $_SESSION['success'] = "Registration successful. Please login.";
+            $_SESSION['success'] = "Registration successful. 
+                Temporary password has been auto-generated. 
+                Please ask the admin to update it for you.";
             header("Location: login.php");
             exit();
         } else {
@@ -82,14 +90,6 @@ if (isset($_POST['register'])) {
             <div class="controls">
                 <div class="main_input_box">
                     <input type="text" name="username" placeholder="Username" required/>
-                </div>
-            </div>
-        </div>
-
-        <div class="control-group">
-            <div class="controls">
-                <div class="main_input_box">
-                    <input type="password" name="password" placeholder="Password" required/>
                 </div>
             </div>
         </div>

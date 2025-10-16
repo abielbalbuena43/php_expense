@@ -71,6 +71,12 @@ if ($selectedMonth > 0 && $selectedYear > 0) {
 } else {
     $viewingLabel = "Viewing All Expenses";
 }
+
+// Build report link (preserves current filters)
+$reportLink = "reports.php";
+if ($selectedMonth > 0 || $selectedYear > 0) {
+    $reportLink .= "?month=" . ($selectedMonth > 0 ? $selectedMonth : '') . "&year=" . ($selectedYear > 0 ? $selectedYear : '');
+}
 ?>
 
 <div id="content">
@@ -93,8 +99,8 @@ if ($selectedMonth > 0 && $selectedYear > 0) {
                 <!-- Small Filter Dropdown -->
                 <div class="filter-section" style="display: inline-block; margin-left: 20px; vertical-align: middle;">
                     <form method="get" id="filterForm" style="display: inline;">
-                        <label style="margin-right: 10px; font-weight: bold;">Filter by Transaction Month:</label>
-                        <select name="month" style="margin-right: 5px; padding: 5px;">
+                        <label style="margin-right: 10px; font-weight: bold; font-size: 14px;">Filter by Transaction Month:</label>
+                        <select name="month" style="margin-right: 5px; padding: 5px; font-size: 14px;">
                             <option value="0" <?= ($selectedMonth == 0) ? 'selected' : '' ?>>All Months</option>
                             <?php 
                             $months = [
@@ -108,7 +114,7 @@ if ($selectedMonth > 0 && $selectedYear > 0) {
                             }
                             ?>
                         </select>
-                        <select name="year" style="margin-right: 10px; padding: 5px;">
+                        <select name="year" style="margin-right: 10px; padding: 5px; font-size: 14px;">
                             <option value="0" <?= ($selectedYear == 0) ? 'selected' : '' ?>>All Years</option>
                             <?php 
                             $currentYear = date('Y');
@@ -118,9 +124,10 @@ if ($selectedMonth > 0 && $selectedYear > 0) {
                             }
                             ?>
                         </select>
-                        <button type="submit" class="btn btn-primary" style="padding: 5px 10px;">Apply Filter</button>
+                        <button type="submit" class="btn btn-primary" style="padding: 5px 10px; font-size: 14px;">Apply Filter</button>
+                        <button type="button" id="clearFilter" class="btn btn-secondary" style="padding: 5px 10px; margin-left: 5px; font-size: 14px;">Clear Filter</button>
                     </form>
-                    <span style="margin-left: 10px; font-weight: bold;"><?= htmlspecialchars($viewingLabel) ?></span>
+                    <span style="margin-left: 10px; font-weight: bold; font-size: 14px;"><?= htmlspecialchars($viewingLabel) ?></span>
                 </div>
             </div>
         </div>
@@ -155,19 +162,19 @@ if ($selectedMonth > 0 && $selectedYear > 0) {
                                             <td><?php echo htmlspecialchars($row['category_name']); ?></td>
                                             <td>₱<?php echo number_format($row['expense_total_receipt_amount'], 2); ?></td>
                                             <td style="white-space: nowrap;">
-                                                <a href="expense_view.php?id=<?php echo $row['expense_id']; ?>" class="btn btn-info btn-mini">View</a>
+                                                <a href="expense_view.php?id=<?php echo $row['expense_id']; ?>" class="btn btn-info btn-mini" style="font-size: 12px;">View</a>
                                                 <!-- POST Delete Form -->
                                                 <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this expense?');">
                                                     <input type="hidden" name="delete_id" value="<?php echo $row['expense_id']; ?>">
                                                     <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-                                                    <button type="submit" class="btn btn-danger btn-mini">Delete</button>
+                                                    <button type="submit" class="btn btn-danger btn-mini" style="font-size: 12px;">Delete</button>
                                                 </form>
                                             </td>
                                         </tr>
                                     <?php endwhile; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="8" style="text-align:center; padding: 20px;">
+                                        <td colspan="8" style="text-align:center; padding: 20px; font-size: 14px;">
                                             <?php if ($selectedMonth > 0 && $selectedYear > 0): ?>
                                                 No expenses found for the selected period.
                                             <?php else: ?>
@@ -178,6 +185,15 @@ if ($selectedMonth > 0 && $selectedYear > 0) {
                                 <?php endif; ?>
                             </tbody>
                         </table>
+
+                        <!-- Report Button Below Table -->
+                        <?php if ($result && $result->num_rows > 0): ?>
+                            <div class="report-actions" style="text-align: center; padding: 15px; background: #f8f9fa; border-top: 1px solid #ddd; margin-top: 0;">
+                                <a href="<?= $reportLink ?>" class="btn btn-primary" style="padding: 8px 12px; font-size: 14px; font-weight: bold;">
+                                    <i class="icon-bar-chart"></i> Generate Report for Current Filter
+                                </a>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -204,67 +220,3 @@ $(document).ready(function() {
     });
 });
 </script>
-
-<style>
-/* Inline overrides to apply dashboard.css uniformity (add to header.php or external if preferred) */
-#expensesTable {
-    width: 100% !important;  /* Full width */
-    background-color: #ffffff;
-    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    border-radius: 12px;  /* Matches your CSS rounded corners */
-}
-
-#expensesTable thead th {
-    background-color: #115486 !important;  /* Blue header */
-    color: #ffffff !important;
-    font-size: 14px;
-    font-weight: bold;
-    text-transform: uppercase;
-    border-bottom: 2px solid #ddd;
-    padding: 14px;
-}
-
-#expensesTable tbody td {
-    padding: 12px;
-    font-size: 13px;
-    color: #000000;
-    border-bottom: 1px solid #ddd;
-    vertical-align: middle;
-}
-
-#expensesTable tbody tr:nth-child(odd) {
-    background-color: #f0f0f0;
-}
-
-#expensesTable tbody tr:nth-child(even) {
-    background-color: #ffffff;
-}
-
-#expensesTable tbody tr:hover {
-    background-color: #d6d6d6;
-}
-
-/* Borders and rounding (from your CSS) */
-#expensesTable td, #expensesTable th {
-    border-right: 1px solid #ddd;
-}
-
-#expensesTable th:last-child, #expensesTable td:last-child {
-    border-right: none;
-}
-
-#expensesTable thead tr:first-child th:first-child {
-    border-top-left-radius: 12px;
-}
-
-#expensesTable thead tr:first-child th:last-child {
-    border-top-right-radius: 12px;
-}
-
-/* Global font match */
-body {
-    font-family: 'Arial', sans-serif;
-    font-size: 14px;
-}
-</style>

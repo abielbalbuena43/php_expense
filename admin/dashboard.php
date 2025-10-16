@@ -7,66 +7,77 @@ include "header.php";
 $selectedMonth = intval($_GET['month'] ?? date('m'));
 $selectedYear = intval($_GET['year'] ?? date('Y'));
 
-// Total Expenses (Selected Month/Year)
-$totalExpensesQuery = "
-    SELECT SUM(expense_total_receipt_amount) AS total 
+// Total Expenses (Selected Month/Year) - Prepared for security
+$totalExpensesStmt = $conn->prepare("
+    SELECT COALESCE(SUM(expense_total_receipt_amount), 0) AS total 
     FROM expenses 
-    WHERE MONTH(expense_date) = '$selectedMonth' 
-      AND YEAR(expense_date) = '$selectedYear'
-";
-$totalExpensesResult = mysqli_query($conn, $totalExpensesQuery) or die("Error in totalExpensesQuery: " . mysqli_error($conn));
-$totalExpensesRow = mysqli_fetch_assoc($totalExpensesResult);
-$totalExpenses = $totalExpensesRow['total'] ?? 0;
+    WHERE MONTH(expense_date) = ? AND YEAR(expense_date) = ?
+");
+$totalExpensesStmt->bind_param("ii", $selectedMonth, $selectedYear);
+$totalExpensesStmt->execute();
+$totalExpensesResult = $totalExpensesStmt->get_result();
+$totalExpensesRow = $totalExpensesResult->fetch_assoc();
+$totalExpenses = floatval($totalExpensesRow['total'] ?? 0);
+$totalExpensesStmt->close();
 
-// Top Expense Category (Selected Month/Year)
-$topCategoryQuery = "
-    SELECT c.category_name, SUM(e.expense_total_receipt_amount) AS total
+// Top Expense Category (Selected Month/Year) - Prepared
+$topCategoryStmt = $conn->prepare("
+    SELECT c.category_name, COALESCE(SUM(e.expense_total_receipt_amount), 0) AS total
     FROM expenses e
     JOIN expense_categories c ON e.expense_category_id = c.category_id
-    WHERE MONTH(e.expense_date) = '$selectedMonth' 
-      AND YEAR(e.expense_date) = '$selectedYear'
+    WHERE MONTH(e.expense_date) = ? AND YEAR(e.expense_date) = ?
     GROUP BY c.category_name
     ORDER BY total DESC
     LIMIT 1
-";
-$topCategoryResult = mysqli_query($conn, $topCategoryQuery) or die("Error in topCategoryQuery: " . mysqli_error($conn));
-$topCategoryRow = mysqli_fetch_assoc($topCategoryResult);
+");
+$topCategoryStmt->bind_param("ii", $selectedMonth, $selectedYear);
+$topCategoryStmt->execute();
+$topCategoryResult = $topCategoryStmt->get_result();
+$topCategoryRow = $topCategoryResult->fetch_assoc();
 $topCategory = $topCategoryRow['category_name'] ?? "None";
+$topCategoryStmt->close();
 
 // Placeholder Budget Utilization (based on selected total)
 $budgetTotal = 50000; // Example budget amount (make dynamic later)
 $budgetUtilization = $budgetTotal > 0 ? ($totalExpenses / $budgetTotal) * 100 : 0;
 
 // ---------- Chart Data ----------
-// Pie Chart - Expense Breakdown by Category (Selected Month/Year)
-$pieDataQuery = "
-    SELECT c.category_name, SUM(e.expense_total_receipt_amount) AS total
+// Pie Chart - Expense Breakdown by Category (Selected Month/Year) - Prepared
+$pieDataStmt = $conn->prepare("
+    SELECT c.category_name, COALESCE(SUM(e.expense_total_receipt_amount), 0) AS total
     FROM expenses e
     JOIN expense_categories c ON e.expense_category_id = c.category_id
-    WHERE MONTH(e.expense_date) = '$selectedMonth' 
-      AND YEAR(e.expense_date) = '$selectedYear'
+    WHERE MONTH(e.expense_date) = ? AND YEAR(e.expense_date) = ?
     GROUP BY c.category_name
-";
-$pieResult = mysqli_query($conn, $pieDataQuery) or die("Error in pieDataQuery: " . mysqli_error($conn));
+    HAVING total > 0  -- Skip zero totals for cleaner chart
+");
+$pieDataStmt->bind_param("ii", $selectedMonth, $selectedYear);
+$pieDataStmt->execute();
+$pieResult = $pieDataStmt->get_result();
 $pieLabels = [];
 $pieValues = [];
-while ($row = mysqli_fetch_assoc($pieResult)) {
+while ($row = $pieResult->fetch_assoc()) {
     $pieLabels[] = $row['category_name'];
-    $pieValues[] = $row['total'];
+    $pieValues[] = floatval($row['total']);
 }
+$pieDataStmt->close();
 
-// ---------- Recent Activity ----------
-// Fetch last 5 expenses (latest by created_at) - unchanged, as per minimal design request
-$recentActivityQuery = "
+// ---------- Recent Activity (Synced to Filter) ----------
+// Fetch exactly the 5 most recent expenses within the selected period (by transaction date DESC)
+$recentActivityStmt = $conn->prepare("
     SELECT e.expense_id, e.expense_or_number, e.expense_date, e.expense_total_receipt_amount,
            c.company_name, cat.category_name
     FROM expenses e
     LEFT JOIN companies c ON e.expense_company_id = c.company_id
     LEFT JOIN expense_categories cat ON e.expense_category_id = cat.category_id
-    ORDER BY e.expense_created_at DESC
-    LIMIT 5
-";
-$recentActivityResult = mysqli_query($conn, $recentActivityQuery) or die("Error in recentActivityQuery: " . mysqli_error($conn));
+    WHERE MONTH(e.expense_date) = ? AND YEAR(e.expense_date) = ?
+    ORDER BY e.expense_date DESC  -- Most recent transaction date first within the period
+    LIMIT 5  -- Exactly 5 (or fewer if less available in period)
+");
+$recentActivityStmt->bind_param("ii", $selectedMonth, $selectedYear);
+$recentActivityStmt->execute();
+$recentActivityResult = $recentActivityStmt->get_result();
+$recentActivityStmt->close();
 
 // Format selected period label
 $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedYear));
@@ -155,9 +166,9 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
                 <canvas id="idPieChart"></canvas>
             </div>
 
-            <!-- Recent Activity Table -->
+            <!-- Recent Activity Table (Synced to Filter - 5 Most Recent in Period) -->
             <div class="logs-box">
-                <h4>Recent Activity</h4>
+                <h4>Recent Activity (<?= htmlspecialchars($selectedPeriodLabel) ?>)</h4>  <!-- Updated title to reflect filter -->
                 <div class="widget-box">
                     <div class="widget-content nopadding">
                         <table style="width: 100%; border-collapse: collapse;">
@@ -171,8 +182,8 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if (mysqli_num_rows($recentActivityResult) > 0) { ?>
-                                    <?php while ($row = mysqli_fetch_assoc($recentActivityResult)) { ?>
+                                <?php if ($recentActivityResult && $recentActivityResult->num_rows > 0) { ?>
+                                    <?php while ($row = $recentActivityResult->fetch_assoc()) { ?>
                                         <tr>
                                             <td style="padding: 8px;"><?= htmlspecialchars($row['expense_or_number'] ?? '-') ?></td>
                                             <td style="padding: 8px;"><?= date('M d, Y', strtotime($row['expense_date'])) ?></td>
