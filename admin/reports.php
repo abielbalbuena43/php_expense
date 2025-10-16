@@ -1,18 +1,11 @@
 <?php
-ob_start();  // Start output buffering
-session_start();
+session_start();  // For any future alerts
 include "connection.php";
 include "header.php";
 
-// Include PhpSpreadsheet
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-
-// Handle export at the top
+// First, handle CSV export if requested
 if (isset($_GET['export'])) {
+    // Re-apply filters for export
     $exportMonth = intval($_GET['month'] ?? 0);
     $exportYear = intval($_GET['year'] ?? 0);
     $exportCategory = intval($_GET['category'] ?? 0);
@@ -42,7 +35,6 @@ if (isset($_GET['export'])) {
     $exportWhereSql = !empty($exportWhereClauses) ? " WHERE " . implode(" AND ", $exportWhereClauses) : "";
 
     $exportType = $_GET['export'];
-    
     if ($exportType === 'category') {
         $exportCatSql = "
             SELECT cat.category_name, 
@@ -61,41 +53,27 @@ if (isset($_GET['export'])) {
         $exportCatStmt->execute();
         $exportCatRes = $exportCatStmt->get_result();
         
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Category Report');
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="expense_report_by_category_' . date('Y-m-d') . '.csv"');
+        $output = fopen('php://output', 'w');
+        fputcsv($output, ['Category', 'Number of Expenses', 'Total Amount']);  // Headers
         
-        // Headers
-        $sheet->setCellValue('A1', 'Category');
-        $sheet->setCellValue('B1', 'Number of Expenses');
-        $sheet->setCellValue('C1', 'Total Amount');
-        $sheet->getStyle('A1:C1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:C1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('115486');
-        $sheet->getStyle('A1:C1')->getFont()->getColor()->setRGB('FFFFFF');
-        
-        $rowNum = 2;
         $catGrandTotal = 0;
         while ($row = $exportCatRes->fetch_assoc()) {
-            $sheet->setCellValue('A'.$rowNum, $row['category_name']);
-            $sheet->setCellValue('B'.$rowNum, $row['expense_count']);
-            $sheet->setCellValue('C'.$rowNum, $row['total_amount']);
-            $sheet->getStyle('C'.$rowNum)->getNumberFormat()->setFormatCode('"$"#,##0.00');
+            fputcsv($output, [
+                $row['category_name'],
+                $row['expense_count'],
+                '₱' . number_format($row['total_amount'], 2)
+            ]);
             $catGrandTotal += $row['total_amount'];
-            $rowNum++;
         }
-        
-        // Grand Total
-        $sheet->setCellValue('A'.$rowNum, '*** GRAND TOTAL ***');
-        $sheet->setCellValue('B'.$rowNum, mysqli_num_rows($exportCatRes));
-        $sheet->setCellValue('C'.$rowNum, $catGrandTotal);
-        $sheet->getStyle('A'.$rowNum.':C'.$rowNum)->getFont()->setBold(true);
-        $sheet->getStyle('C'.$rowNum)->getNumberFormat()->setFormatCode('"$"#,##0.00');
-        
-        $writer = new Xlsx($spreadsheet);
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="expense_report_by_category_' . date('Y-m-d') . '.xlsx"');
-        header('Cache-Control: max-age=0');
-        $writer->save('php://output');
+        // Grand Total row
+        fputcsv($output, [
+            '*** GRAND TOTAL ***',
+            mysqli_num_rows($exportCatRes),
+            '₱' . number_format($catGrandTotal, 2)
+        ]);
+        fclose($output);
         exit();
     } elseif ($exportType === 'company') {
         $exportCompSql = "
@@ -115,52 +93,38 @@ if (isset($_GET['export'])) {
         $exportCompStmt->execute();
         $exportCompRes = $exportCompStmt->get_result();
         
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Company Report');
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="expense_report_by_company_' . date('Y-m-d') . '.csv"');
+        $output = fopen('php://output', 'w');
+        fputcsv($output, ['Company', 'Number of Expenses', 'Total Amount']);  // Headers
         
-        // Headers
-        $sheet->setCellValue('A1', 'Company');
-        $sheet->setCellValue('B1', 'Number of Expenses');
-        $sheet->setCellValue('C1', 'Total Amount');
-        $sheet->getStyle('A1:C1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:C1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('115486');
-        $sheet->getStyle('A1:C1')->getFont()->getColor()->setRGB('FFFFFF');
-        
-        $rowNum = 2;
         $compGrandTotal = 0;
         while ($row = $exportCompRes->fetch_assoc()) {
-            $sheet->setCellValue('A'.$rowNum, $row['company_name']);
-            $sheet->setCellValue('B'.$rowNum, $row['expense_count']);
-            $sheet->setCellValue('C'.$rowNum, $row['total_amount']);
-            $sheet->getStyle('C'.$rowNum)->getNumberFormat()->setFormatCode('"$"#,##0.00');
+            fputcsv($output, [
+                $row['company_name'],
+                $row['expense_count'],
+                '₱' . number_format($row['total_amount'], 2)
+            ]);
             $compGrandTotal += $row['total_amount'];
-            $rowNum++;
         }
-        
-        // Grand Total
-        $sheet->setCellValue('A'.$rowNum, '*** GRAND TOTAL ***');
-        $sheet->setCellValue('B'.$rowNum, mysqli_num_rows($exportCompRes));
-        $sheet->setCellValue('C'.$rowNum, $compGrandTotal);
-        $sheet->getStyle('A'.$rowNum.':C'.$rowNum)->getFont()->setBold(true);
-        $sheet->getStyle('C'.$rowNum)->getNumberFormat()->setFormatCode('"$"#,##0.00');
-        
-        $writer = new Xlsx($spreadsheet);
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="expense_report_by_company_' . date('Y-m-d') . '.xlsx"');
-        header('Cache-Control: max-age=0');
-        $writer->save('php://output');
+        // Grand Total row
+        fputcsv($output, [
+            '*** GRAND TOTAL ***',
+            mysqli_num_rows($exportCompRes),
+            '₱' . number_format($compGrandTotal, 2)
+        ]);
+        fclose($output);
         exit();
     }
 }
 
-// The rest of your code follows...
+// Now, proceed with the rest of the page
 // Fetch filter options (categories and companies for dropdowns)
 $categoriesQuery = "SELECT category_id, category_name FROM expense_categories ORDER BY category_name ASC";
-$categoriesResult = mysqli_query($conn, $categoriesQuery);
+$categoriesResult = mysqli_query($conn, $categoriesQuery) or die("Error fetching categories: " . mysqli_error($conn));
 
 $companiesQuery = "SELECT company_id, company_name FROM companies ORDER BY company_name ASC";
-$companiesResult = mysqli_query($conn, $companiesQuery);
+$companiesResult = mysqli_query($conn, $companiesQuery) or die("Error fetching companies: " . mysqli_error($conn));
 
 // Process filters
 $selectedMonth = intval($_GET['month'] ?? 0);
@@ -223,7 +187,7 @@ $companySummarySql = "
 ";
 $companyStmt = $conn->prepare($companySummarySql);
 if (!empty($params)) {
-    $companyStmt->bind_param($types, ...$exportParams);  // Fix: Use correct params
+    $companyStmt->bind_param($types, ...$params);
 }
 $companyStmt->execute();
 $companyResult = $companyStmt->get_result();
@@ -233,38 +197,204 @@ $companyStmt->close();
 $viewingLabel = "Viewing Report";
 if ($selectedMonth > 0 && $selectedYear > 0) {
     $periodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedYear));
-    $viewingLabel += " for: $periodLabel";
+    $viewingLabel .= " for: $periodLabel";
 }
 if ($selectedCategory > 0) {
-    $catName = '';
     mysqli_data_seek($categoriesResult, 0);
     while ($row = mysqli_fetch_assoc($categoriesResult)) {
         if ($row['category_id'] == $selectedCategory) {
-            $catName = $row['category_name'];
+            $viewingLabel .= " | Category: " . htmlspecialchars($row['category_name']);
             break;
         }
     }
-    $viewingLabel += " | Category: " . htmlspecialchars($catName);
 }
 if ($selectedCompany > 0) {
-    $compName = '';
     mysqli_data_seek($companiesResult, 0);
     while ($row = mysqli_fetch_assoc($companiesResult)) {
         if ($row['company_id'] == $selectedCompany) {
-            $compName = $row['company_name'];
+            $viewingLabel .= " | Company: " . htmlspecialchars($row['company_name']);
             break;
         }
     }
-    $viewingLabel += " | Company: " . htmlspecialchars($compName);
 }
 if (empty($whereClauses)) {
-    $viewingLabel += " (All Data)";
+    $viewingLabel .= " (All Data)";
 }
 ?>
 
-<!-- The rest of your HTML code remains the same as before -->
+
+<?php include "footer.php"; ?>
+
+
 <div id="content">
-    <!-- ... (rest of the HTML) ... -->
+    <div id="content-header">
+        <div id="breadcrumb">
+            <a href="dashboard.php" class="tip-bottom"><i class="icon-home"></i> Home</a>
+            <a href="expenses.php" class="tip-bottom">Expenses</a>
+            <a href="#" class="current">Reports</a>
+        </div>
+    </div>
+
+    <div class="container-fluid">
+
+        <!-- Filter Section (uniform with expenses.php/dashboard) -->
+        <div class="filter-section">
+            <form method="get" id="filterForm">
+                <label style="margin-right: 10px; font-weight: bold; font-size: 14px;">Generate Report:</label>
+                
+                <!-- Date Filter -->
+                <select name="month" style="margin-right: 5px; padding: 5px; font-size: 14px;">
+                    <option value="0" <?= ($selectedMonth == 0) ? 'selected' : '' ?>>All Months</option>
+                    <?php 
+                    $months = [
+                        '01' => 'January', '02' => 'February', '03' => 'March', '04' => 'April', 
+                        '05' => 'May', '06' => 'June', '07' => 'July', '08' => 'August', 
+                        '09' => 'September', '10' => 'October', '11' => 'November', '12' => 'December'
+                    ];
+                    foreach ($months as $val => $name) {
+                        $selected = ($val == $selectedMonth) ? 'selected' : '';
+                        echo "<option value='$val' $selected>$name</option>";
+                    }
+                    ?>
+                </select>
+                <select name="year" style="margin-right: 10px; padding: 5px; font-size: 14px;">
+                    <option value="0" <?= ($selectedYear == 0) ? 'selected' : '' ?>>All Years</option>
+                    <?php 
+                    $currentYear = date('Y');
+                    for ($y = $currentYear; $y >= $currentYear - 9; $y--) {
+                        $selected = ($y == $selectedYear) ? 'selected' : '';
+                        echo "<option value='$y' $selected>$y</option>";
+                    }
+                    ?>
+                </select>
+                
+                <!-- Category Filter -->
+                <select name="category" style="margin-right: 5px; padding: 5px; font-size: 14px;">
+                    <option value="0" <?= ($selectedCategory == 0) ? 'selected' : '' ?>>All Categories</option>
+                    <?php 
+                    mysqli_data_seek($categoriesResult, 0); // Reset for display
+                    while ($row = mysqli_fetch_assoc($categoriesResult)): ?>
+                        <option value="<?= $row['category_id'] ?>" <?= ($selectedCategory == $row['category_id']) ? 'selected' : '' ?>><?= htmlspecialchars($row['category_name']) ?></option>
+                    <?php endwhile; ?>
+                </select>
+                
+                <!-- Company Filter -->
+                <select name="company" style="margin-right: 10px; padding: 5px; font-size: 14px;">
+                    <option value="0" <?= ($selectedCompany == 0) ? 'selected' : '' ?>>All Companies</option>
+                    <?php 
+                    mysqli_data_seek($companiesResult, 0); // Reset for display
+       while ($row = mysqli_fetch_assoc($companiesResult)): ?>
+           <option value="<?= $row['company_id'] ?>" <?= ($selectedCompany == $row['company_id']) ? 'selected' : '' ?>><?= htmlspecialchars($row['company_name']) ?></option>
+       <?php endwhile; ?>
+                </select>
+                
+                <button type="submit" class="btn btn-primary" style="padding: 8px 12px; font-size: 14px; font-weight: bold;">Generate Report</button>
+                <button type="button" id="clearFilter" class="btn btn-secondary" style="padding: 8px 12px; margin-left: 5px; font-size: 14px;">Clear Filters</button>
+            </form>
+            <span style="margin-left: 10px; font-weight: bold; font-size: 14px;"><?= htmlspecialchars($viewingLabel) ?></span>
+        </div>
+
+        <!-- Reports Output -->
+        <div class="row-fluid">
+            <div class="span12">
+                <div class="widget-box">
+                    <div class="widget-title">
+                        <span class="icon"><i class="icon-bar-chart"></i></span>
+                        <h5 style="font-size: 20px; font-weight: 800; color: #000000;">Expense Report Summary</h5>
+                    </div>
+                    <div class="widget-content">
+                        <?php if ($categoryResult->num_rows > 0 || $companyResult->num_rows > 0): ?>
+                            <!-- Category Breakdown Table -->
+                            <h4 style="font-size: 20px; font-weight: 800; color: #000000; margin-bottom: 15px;">By Category</h4>
+                            <div class="widget-box">
+                                <div class="widget-content nopadding">
+                                    <table class="table table-bordered table-striped" id="categoryTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Category</th>
+                                                <th>Number of Expenses</th>
+                                                <th>Total Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php 
+                                            mysqli_data_seek($categoryResult, 0); // Reset for display
+                                            $grandTotalCat = 0;
+                                            while ($row = $categoryResult->fetch_assoc()): 
+                                                $grandTotalCat += $row['total_amount'];
+                                            ?>
+                                                <tr>
+                                                    <td><?= htmlspecialchars($row['category_name']) ?></td>
+                                                    <td><?= number_format($row['expense_count']) ?></td>
+                                                    <td>₱<?= number_format($row['total_amount'], 2) ?></td>
+                                                </tr>
+                                            <?php endwhile; ?>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr style="font-weight: bold; background-color: #f8f9fa;">
+                                                <td>Grand Total</td>
+                                                <td><?= number_format(mysqli_num_rows($categoryResult)) ?></td>
+                                                <td>₱<?= number_format($grandTotalCat, 2) ?></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Company Breakdown Table -->
+                            <h4 style="font-size: 20px; font-weight: 800; color: #000000; margin-top: 30px; margin-bottom: 15px;">By Company</h4>
+                            <div class="widget-box">
+                                <div class="widget-content nopadding">
+                                    <table class="table table-bordered table-striped" id="companyTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Company</th>
+                                                <th>Number of Expenses</th>
+                                                <th>Total Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php 
+                                            mysqli_data_seek($companyResult, 0); // Reset for display
+                                            $grandTotalComp = 0;
+                                            while ($row = $companyResult->fetch_assoc()): 
+                                                $grandTotalComp += $row['total_amount'];
+                                            ?>
+                                                <tr>
+                                                    <td><?= htmlspecialchars($row['company_name']) ?></td>
+                                                    <td><?= number_format($row['expense_count']) ?></td>
+                                                    <td>₱<?= number_format($row['total_amount'], 2) ?></td>
+                                                </tr>
+                                            <?php endwhile; ?>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr style="font-weight: bold; background-color: #f8f9fa;">
+                                                <td>Grand Total</td>
+                                                <td><?= number_format(mysqli_num_rows($companyResult)) ?></td>
+                                                <td>₱<?= number_format($grandTotalComp, 2) ?></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Export Buttons -->
+                            <div style="margin-top: 20px; text-align: center;">
+                                <a href="?<?= http_build_query($_GET) ?>&export=category" class="btn btn-success" style="padding: 8px 12px; font-size: 14px; margin-right: 10px;">
+                                    <i class="icon-download"></i> Export Category Report (CSV)
+                                </a>
+                            </div>
+                        <?php else: ?>
+                            <div style="text-align: center; padding: 40px; font-size: 14px; color: #666;">
+                                No data matches the selected filters. Adjust and generate again.
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
 
 <?php include "footer.php"; ?>
