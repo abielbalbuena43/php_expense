@@ -102,11 +102,41 @@ $status = "Active";
     </ul>
 </div>
 
-<!-- Logout Button -->
-<div id="search" style="margin-bottom: 20px;">
+
+
+<!-- JavaScript Files -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<script>
+$(document).ready(function() {
+    // If using Bootstrap, this should handle dropdowns automatically
+    $('.submenu > a').on('click', function(e) {
+        e.preventDefault();  // Prevent default link behavior
+        var submenu = $(this).next('ul');  // Get the submenu ul
+        if (submenu.is(':visible')) {
+            submenu.slideUp();  // Hide if visible
+        } else {
+            submenu.slideDown();  // Show if hidden
+        }
+    });
+    
+    // Optional: Close other submenus if one is opened (for better UX)
+    $('.submenu > a').on('click', function() {
+        $('.submenu ul:visible').not($(this).next('ul')).slideUp();  // Close other visible submenus
+    });
+});
+</script>
+
+<!-- Logout Button (moved inside the body) -->
+<div id="search" style="margin-bottom: 20px; padding: 10px;">
     <form action="logout.php" method="post">
         <button type="submit" class="btn btn-danger">
             <i class="icon icon-share-alt"></i> Log Out
         </button>
     </form>
 </div>
+
+</body>
+
+</html>
+
