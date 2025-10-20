@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 include "connection.php";  // Assuming this is your database connection file
 include "header.php";  // Keep this to maintain the UI design
