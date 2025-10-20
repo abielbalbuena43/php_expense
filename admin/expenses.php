@@ -190,7 +190,7 @@ if ($selectedMonth > 0 || $selectedYear > 0) {
                         <?php if ($result && $result->num_rows > 0): ?>
                             <div class="report-actions" style="text-align: center; padding: 15px; background: #f8f9fa; border-top: 1px solid #ddd; margin-top: 0;">
                                 <a href="<?= $reportLink ?>" class="btn btn-primary" style="padding: 8px 12px; font-size: 14px; font-weight: bold;">
-                                    <i class="icon-bar-chart"></i> Generate Report for Current Filter
+                                    <i class="icon-bar-chart"></i> Generate Report
                                 </a>
                             </div>
                         <?php endif; ?>
