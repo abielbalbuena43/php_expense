@@ -1,22 +1,12 @@
 <?php
-// ===========================
-// Database Connection
-// ===========================
+$host = "sql110.infinityfree.com"; 
+$username = "if0_40217329";
+$password = "dragoon070973"; 
+$database = "if0_40217329_php_expense";
 
-// Database credentials
-$host = "localhost";       // Usually localhost for XAMPP
-$username = "root";        // Default username in XAMPP
-$password = "";            // Default password in XAMPP is empty
-$database = "php_expense"; // Your expense tracker database name
+$link = mysqli_connect($host, $username, $password, $database);
 
-// Create the connection
-$conn = mysqli_connect($host, $username, $password, $database);
-
-// Check connection
-if (!$conn) {
+if (!$link) {
     die("Connection failed: " . mysqli_connect_error());
 }
-
-// Optional: uncomment for debugging
-// echo "Connection successful!";
 ?>
