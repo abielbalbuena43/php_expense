@@ -15,7 +15,8 @@ $expense_id = intval($_GET['id']);
 // Fetch expense details
 $query = "
     SELECT e.*, 
-           c.company_name, 
+           c.company_name,
+           c.company_tin,
            p.payee_name, 
            cat.category_name, 
            r.reseller_name,
@@ -68,6 +69,14 @@ $expense = mysqli_fetch_assoc($result);
                                 <label class="control-label">Company:</label>
                                 <div class="controls">
                                     <input type="text" class="span11" value="<?= htmlspecialchars($expense['company_name']) ?>" disabled>
+                                </div>
+                            </div>
+
+                            <!-- Company TIN -->
+                            <div class="control-group">
+                                <label class="control-label">Company TIN:</label>
+                                <div class="controls">
+                                    <input type="text" class="span11" value="<?= htmlspecialchars($expense['company_tin']) ?>" disabled>
                                 </div>
                             </div>
 

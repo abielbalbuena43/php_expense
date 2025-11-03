@@ -1,7 +1,6 @@
 <?php
 ob_start();
 session_start();
-include "header.php";
 include "connection.php";
 
 // Check if an expense ID is provided
@@ -68,6 +67,7 @@ if (isset($_SESSION['alert'])) {
 } else {
     $alert = null;
 }
+include "header.php";
 ?>
 
 <div id="content">

@@ -1,12 +1,12 @@
 <?php
-$host = "sql110.infinityfree.com"; 
-$username = "if0_40217329";
-$password = "dragoon070973"; 
-$database = "if0_40217329_php_expense";
+$host = "localhost";
+$user = "root";
+$pass = ""; // usually empty in XAMPP
+$db   = "php_expense"; // use your local database name
 
-$link = mysqli_connect($host, $username, $password, $database);
+$conn = mysqli_connect($host, $user, $pass, $db);
 
-if (!$link) {
-    die("Connection failed: " . mysqli_connect_error());
+if (!$conn) {
+    die("Database connection failed: " . mysqli_connect_error());
 }
 ?>

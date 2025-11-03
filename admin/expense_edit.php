@@ -21,7 +21,13 @@ $end_users = mysqli_query($conn, "SELECT end_user_id, end_user_name FROM expense
 $products = mysqli_query($conn, "SELECT product_id, product_name FROM expense_products ORDER BY product_name ASC");
 
 // Fetch current expense record
-$expense_query = mysqli_query($conn, "SELECT * FROM expenses WHERE expense_id = '$expense_id' LIMIT 1");
+$expense_query = mysqli_query($conn, "
+    SELECT e.*, c.company_tin
+    FROM expenses e
+    LEFT JOIN companies c ON e.expense_company_id = c.company_id
+    WHERE e.expense_id = '$expense_id'
+    LIMIT 1
+");
 if (mysqli_num_rows($expense_query) === 0) {
     echo "<div class='alert alert-danger'>Expense record not found.</div>";
     exit();
@@ -132,6 +138,14 @@ unset($_SESSION['alert']);
                                             </option>
                                         <?php } ?>
                                     </select>
+                                </div>
+                            </div>
+
+                            <!-- Company TIN -->
+                            <div class="control-group">
+                                <label class="control-label">Company TIN:</label>
+                                <div class="controls">
+                                    <input type="text" class="span11" value="<?= htmlspecialchars($expense['company_tin'] ?? '') ?>" readonly>
                                 </div>
                             </div>
 

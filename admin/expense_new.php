@@ -5,7 +5,7 @@ include "header.php";
 include "connection.php";
 
 // Fetch companies, payees, categories, resellers, end users, products
-$companies = mysqli_query($conn, "SELECT company_id, company_name FROM companies ORDER BY company_name ASC");
+$companies = mysqli_query($conn, "SELECT company_id, company_name, company_tin FROM companies ORDER BY company_name ASC");
 $payees = mysqli_query($conn, "SELECT payee_id, payee_name FROM payees ORDER BY payee_name ASC");
 $categories = mysqli_query($conn, "SELECT category_id, category_name FROM expense_categories ORDER BY category_name ASC");
 $resellers = mysqli_query($conn, "SELECT reseller_id, reseller_name FROM resellers ORDER BY reseller_name ASC");
@@ -136,14 +136,25 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Company:</label>
                                 <div class="controls">
-                                    <select name="expense_company_id" class="span11" required>
+                                    <select name="expense_company_id" id="companySelect" class="span11" required>
                                         <option value="" disabled selected>Select Company</option>
                                         <?php while ($row = mysqli_fetch_assoc($companies)) { ?>
-                                            <option value="<?= $row['company_id'] ?>"><?= $row['company_name'] ?></option>
+                                            <option value="<?= $row['company_id'] ?>" data-tin="<?= $row['company_tin'] ?>">
+                                                <?= $row['company_name'] ?>
+                                            </option>
                                         <?php } ?>
                                     </select>
                                 </div>
                             </div>
+
+                            <!-- Company TIN (Auto-filled) -->
+                            <div class="control-group">
+                                <label class="control-label">Company TIN:</label>
+                                <div class="controls">
+                                    <input type="text" class="span11" id="companyTin" name="company_tin" readonly placeholder="Select a company first">
+                                </div>
+                            </div>
+
 
                             <!-- Payee -->
                             <div class="control-group">
@@ -376,6 +387,13 @@ calcFields.forEach(input => {
 
 // Initialize calculations on page load
 recalc();
+
+// Auto-display company TIN
+document.getElementById('companySelect').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const tin = selectedOption.getAttribute('data-tin') || '';
+    document.getElementById('companyTin').value = tin;
+});
 </script>
 
 <?php include "footer.php"; ?>
