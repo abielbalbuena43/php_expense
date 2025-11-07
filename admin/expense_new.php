@@ -34,11 +34,11 @@ if (isset($_POST['submit_expense'])) {
     $zero_rated = floatval($_POST['expense_zero_rated']);
     $vat_rate = floatval($_POST['expense_vat_rate']);
 
-    // Calculations
-    $total_purchases = $gross_taxable + $service_charge + $services + $capital_goods + $goods_other;
-    $total_input_tax = round($total_purchases * ($vat_rate/100), 2);
-    $total_receipt_amount = round($total_purchases + $total_input_tax, 2);
-    $taxable_net_vat = $total_purchases;
+    // Calculations (updated for consistency with JS and logical accuracy)
+    $total_purchases = $services + $capital_goods + $goods_other;  // Only taxable purchases
+    $total_input_tax = round($total_purchases * ($vat_rate / 100), 2);
+    $total_receipt_amount = round($gross_taxable + $service_charge + $exempt + $zero_rated + $total_input_tax, 2);  // Include all components
+    $taxable_net_vat = round($total_purchases - $total_input_tax, 2);  // Net of VAT
 
     // Insert into DB
     $query = "
@@ -241,56 +241,56 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Gross Taxable:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_gross_taxable" step="0.01" value="0.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_gross_taxable" step="0.01" placeholder="0.00" required />
                                 </div>
                             </div>
 
                             <div class="control-group">
                                 <label class="control-label">Service Charge:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_service_charge" step="0.01" value="0.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_service_charge" step="0.01" placeholder="0.00" required />
                                 </div>
                             </div>
 
                             <div class="control-group">
                                 <label class="control-label">Services:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_services" step="0.01" value="0.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_services" step="0.01" placeholder="0.00" required />
                                 </div>
                             </div>
 
                             <div class="control-group">
                                 <label class="control-label">Capital Goods:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_capital_goods" step="0.01" value="0.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_capital_goods" step="0.01" placeholder="0.00" required />
                                 </div>
                             </div>
 
                             <div class="control-group">
                                 <label class="control-label">Goods Other than Capital Goods:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_goods_other_than_capital" step="0.01" value="0.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_goods_other_than_capital" step="0.01" placeholder="0.00" required />
                                 </div>
                             </div>
 
                             <div class="control-group">
                                 <label class="control-label">Exempt:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_exempt" step="0.01" value="0.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_exempt" step="0.01" placeholder="0.00" required />
                                 </div>
                             </div>
 
                             <div class="control-group">
                                 <label class="control-label">Zero Rated:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_zero_rated" step="0.01" value="0.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_zero_rated" step="0.01" placeholder="0.00" required />
                                 </div>
                             </div>
 
                             <div class="control-group">
                                 <label class="control-label">VAT Rate (%):</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_vat_rate" step="0.01" value="12.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_vat_rate" step="0.01" placeholder="12.00" required />
                                 </div>
                             </div>
 

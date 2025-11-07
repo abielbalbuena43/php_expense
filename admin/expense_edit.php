@@ -57,7 +57,8 @@ if (isset($_POST['update_expense'])) {
     // ===== Recalculate to prevent tampering =====
     $total_purchases = $services + $capital_goods + $goods_other;
     $total_input_tax = round($total_purchases * ($vat_rate / 100), 2);
-    $total_receipt_amount = round($gross_taxable + $service_charge, 2);
+    $total_receipt_amount = round($gross_taxable + $service_charge + $exempt + $zero_rated + $total_input_tax, 2);  // Updated to include all components
+    $taxable_net_vat = round($total_purchases - $total_input_tax, 2);  // Added calculation for net VAT
 
     // Update query
     $query = "
@@ -246,7 +247,7 @@ unset($_SESSION['alert']);
                                 <label class="control-label">Gross Taxable:</label>
                                 <div class="controls">
                                     <input type="number" step="0.01" class="span11 calc-field" name="expense_gross_taxable"
-                                           value="<?= htmlspecialchars($expense['expense_gross_taxable']) ?>">
+                                           value="<?= $expense['expense_gross_taxable'] == '0.00' ? '' : htmlspecialchars($expense['expense_gross_taxable']) ?>" placeholder="0.00">
                                 </div>
                             </div>
 
@@ -254,7 +255,7 @@ unset($_SESSION['alert']);
                                 <label class="control-label">Service Charge:</label>
                                 <div class="controls">
                                     <input type="number" step="0.01" class="span11 calc-field" name="expense_service_charge"
-                                           value="<?= htmlspecialchars($expense['expense_service_charge']) ?>">
+                                           value="<?= $expense['expense_service_charge'] == '0.00' ? '' : htmlspecialchars($expense['expense_service_charge']) ?>" placeholder="0.00">
                                 </div>
                             </div>
 
@@ -262,7 +263,7 @@ unset($_SESSION['alert']);
                                 <label class="control-label">Services:</label>
                                 <div class="controls">
                                     <input type="number" step="0.01" class="span11 calc-field" name="expense_services"
-                                           value="<?= htmlspecialchars($expense['expense_services']) ?>">
+                                           value="<?= $expense['expense_services'] == '0.00' ? '' : htmlspecialchars($expense['expense_services']) ?>" placeholder="0.00">
                                 </div>
                             </div>
 
@@ -270,7 +271,7 @@ unset($_SESSION['alert']);
                                 <label class="control-label">Capital Goods:</label>
                                 <div class="controls">
                                     <input type="number" step="0.01" class="span11 calc-field" name="expense_capital_goods"
-                                           value="<?= htmlspecialchars($expense['expense_capital_goods']) ?>">
+                                           value="<?= $expense['expense_capital_goods'] == '0.00' ? '' : htmlspecialchars($expense['expense_capital_goods']) ?>" placeholder="0.00">
                                 </div>
                             </div>
 
@@ -278,7 +279,7 @@ unset($_SESSION['alert']);
                                 <label class="control-label">Goods Other than Capital Goods:</label>
                                 <div class="controls">
                                     <input type="number" step="0.01" class="span11 calc-field" name="expense_goods_other_than_capital"
-                                           value="<?= htmlspecialchars($expense['expense_goods_other_than_capital']) ?>">
+                                           value="<?= $expense['expense_goods_other_than_capital'] == '0.00' ? '' : htmlspecialchars($expense['expense_goods_other_than_capital']) ?>" placeholder="0.00">
                                 </div>
                             </div>
 
@@ -286,7 +287,7 @@ unset($_SESSION['alert']);
                                 <label class="control-label">Exempt:</label>
                                 <div class="controls">
                                     <input type="number" step="0.01" class="span11 calc-field" name="expense_exempt"
-                                           value="<?= htmlspecialchars($expense['expense_exempt']) ?>">
+                                           value="<?= $expense['expense_exempt'] == '0.00' ? '' : htmlspecialchars($expense['expense_exempt']) ?>" placeholder="0.00">
                                 </div>
                             </div>
 
@@ -294,7 +295,7 @@ unset($_SESSION['alert']);
                                 <label class="control-label">Zero Rated:</label>
                                 <div class="controls">
                                     <input type="number" step="0.01" class="span11 calc-field" name="expense_zero_rated"
-                                           value="<?= htmlspecialchars($expense['expense_zero_rated']) ?>">
+                                           value="<?= $expense['expense_zero_rated'] == '0.00' ? '' : htmlspecialchars($expense['expense_zero_rated']) ?>" placeholder="0.00">
                                 </div>
                             </div>
 
@@ -302,7 +303,7 @@ unset($_SESSION['alert']);
                                 <label class="control-label">VAT Rate (%):</label>
                                 <div class="controls">
                                     <input type="number" step="0.01" class="span11 calc-field" name="expense_vat_rate"
-                                           value="<?= htmlspecialchars($expense['expense_vat_rate']) ?>">
+                                           value="<?= $expense['expense_vat_rate'] == '12.00' ? '' : htmlspecialchars($expense['expense_vat_rate']) ?>" placeholder="12.00">
                                 </div>
                             </div>
 
