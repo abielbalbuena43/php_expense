@@ -34,11 +34,15 @@ if (isset($_POST['submit_expense'])) {
     $zero_rated = floatval($_POST['expense_zero_rated']);
     $vat_rate = floatval($_POST['expense_vat_rate']);
 
-    // Calculations (updated for consistency with JS and logical accuracy)
-    $total_purchases = $services + $capital_goods + $goods_other;  // Only taxable purchases
-    $total_input_tax = round($total_purchases * ($vat_rate / 100), 2);
-    $total_receipt_amount = round($gross_taxable + $service_charge + $exempt + $zero_rated + $total_input_tax, 2);  // Include all components
-    $taxable_net_vat = round($total_purchases - $total_input_tax, 2);  // Net of VAT
+// Fixed Calculations
+// Total Purchases = Sum of all taxable purchase amounts (net of VAT)
+$total_purchases = $gross_taxable + $services + $capital_goods + $goods_other;
+// Total Input Tax = VAT on total purchases
+$total_input_tax = round($total_purchases * ($vat_rate / 100), 2);
+// Taxable (Net of VAT) = Total purchases minus input tax
+$taxable_net_vat = round($total_purchases - $total_input_tax, 2);
+// Total Receipt Amount = Net purchases + input tax + other non-taxable amounts
+$total_receipt_amount = round($total_purchases + $service_charge + $exempt + $zero_rated + $total_input_tax, 2);
 
     // Insert into DB
     $query = "
@@ -92,6 +96,13 @@ if (isset($_POST['submit_expense'])) {
     ";
 
     if (mysqli_query($conn, $query)) {
+        // Get the newly inserted expense ID
+        $expense_id = mysqli_insert_id($conn);
+        
+        // Log the action
+        $logQuery = "INSERT INTO logs (log_action, log_user, log_details, log_date) VALUES ('Expense created', '" . mysqli_real_escape_string($conn, $_SESSION['username']) . "', 'Expense ID: $expense_id', NOW())";
+        mysqli_query($conn, $logQuery);
+        
         $_SESSION['alert'] = "success";
         header("Location: expenses.php");
         exit();
@@ -155,7 +166,6 @@ unset($_SESSION['alert']);
                                 </div>
                             </div>
 
-
                             <!-- Payee -->
                             <div class="control-group">
                                 <label class="control-label">Payee:</label>
@@ -196,36 +206,36 @@ unset($_SESSION['alert']);
                             </div>
 
                             <!-- End User (Optional) -->
-                                <div class="control-group">
-                                    <label class="control-label">End User (Optional):</label>
-                                    <div class="controls">
-                                        <select name="expense_user_id" class="span11">
+                            <div class="control-group">
+                                <label class="control-label">End User (Optional):</label>
+                                <div class="controls">
+                                    <select name="expense_user_id" class="span11">
                                         <option value="" selected>None</option>
-                                            <?php while ($row = mysqli_fetch_assoc($end_users)) { ?>
-                                                <option value="<?= $row['end_user_id'] ?>"><?= $row['end_user_name'] ?></option>
-                                            <?php } ?>
-                                        </select>
-                                    </div>
+                                        <?php while ($row = mysqli_fetch_assoc($end_users)) { ?>
+                                            <option value="<?= $row['end_user_id'] ?>"><?= $row['end_user_name'] ?></option>
+                                        <?php } ?>
+                                    </select>
                                 </div>
+                            </div>
 
-                                <!-- Product (Optional) -->
-                                <div class="control-group">
-                                    <label class="control-label">Product (Optional):</label>
-                                    <div class="controls">
-                                        <select name="expense_product_id" class="span11">
-                                            <option value="" selected>None</option>
-                                            <?php while ($row = mysqli_fetch_assoc($products)) { ?>
-                                                <option value="<?= $row['product_id'] ?>"><?= $row['product_name'] ?></option>
-                                            <?php } ?>
-                                        </select>
-                                    </div>
+                            <!-- Product (Optional) -->
+                            <div class="control-group">
+                                <label class="control-label">Product (Optional):</label>
+                                <div class="controls">
+                                    <select name="expense_product_id" class="span11">
+                                        <option value="" selected>None</option>
+                                        <?php while ($row = mysqli_fetch_assoc($products)) { ?>
+                                            <option value="<?= $row['product_id'] ?>"><?= $row['product_name'] ?></option>
+                                        <?php } ?>
+                                    </select>
                                 </div>
+                            </div>
 
                             <!-- OR Number -->
                             <div class="control-group">
                                 <label class="control-label">OR Number:</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" name="expense_or_number" required />
+                                    <input type="text" class="span11" name="expense_or_number" placeholder="0" required />
                                 </div>
                             </div>
 
@@ -248,49 +258,53 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Service Charge:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_service_charge" step="0.01" placeholder="0.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_service_charge" step="0.01" placeholder="0.00" />
                                 </div>
                             </div>
 
                             <div class="control-group">
                                 <label class="control-label">Services:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_services" step="0.01" placeholder="0.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_services" step="0.01" placeholder="0.00" />
                                 </div>
                             </div>
 
                             <div class="control-group">
                                 <label class="control-label">Capital Goods:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_capital_goods" step="0.01" placeholder="0.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_capital_goods" step="0.01" placeholder="0.00" />
                                 </div>
                             </div>
 
                             <div class="control-group">
                                 <label class="control-label">Goods Other than Capital Goods:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_goods_other_than_capital" step="0.01" placeholder="0.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_goods_other_than_capital" step="0.01" placeholder="0.00" />
                                 </div>
                             </div>
 
                             <div class="control-group">
                                 <label class="control-label">Exempt:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_exempt" step="0.01" placeholder="0.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_exempt" step="0.01" placeholder="0.00" />
                                 </div>
                             </div>
 
                             <div class="control-group">
                                 <label class="control-label">Zero Rated:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_zero_rated" step="0.01" placeholder="0.00" required />
+                                    <input type="number" class="span11 calc-field" name="expense_zero_rated" step="0.01" placeholder="0.00" />
                                 </div>
                             </div>
 
                             <div class="control-group">
                                 <label class="control-label">VAT Rate (%):</label>
                                 <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_vat_rate" step="0.01" placeholder="12.00" required />
+                                    <input type="number" class="span11 calc-field" 
+                                        name="expense_vat_rate" 
+                                        step="0.01" 
+                                        readonly 
+                                        value="12.00" />
                                 </div>
                             </div>
 
@@ -363,8 +377,8 @@ function recalc() {
     const zero_rated = parseFloat(document.querySelector('[name="expense_zero_rated"]').value) || 0;
     const vat_rate = parseFloat(document.querySelector('[name="expense_vat_rate"]').value) || 0;
 
-    // 1. Total Purchases = Services + Capital Goods + Goods Other Than Capital Goods
-    const total_purchases = services + capital_goods + goods_other;
+    // 1. Total Purchases = Gross Taxable + Services + Capital Goods + Goods Other Than Capital Goods
+    const total_purchases = gross_taxable + services + capital_goods + goods_other;
     totalPurchasesInput.value = total_purchases.toFixed(2);
 
     // 2. Total Input Tax = Total Purchases * (VAT Rate / 100)
@@ -375,8 +389,8 @@ function recalc() {
     const taxable_net_vat = total_purchases - total_input_tax;
     taxableNetVatInput.value = taxable_net_vat.toFixed(2);
 
-    // 4. Total Receipt Amount = Gross Taxable + Service Charge + Exempt + Zero Rated + Total Input Tax
-    const total_receipt = gross_taxable + service_charge + exempt + zero_rated + total_input_tax;
+    // 4. Total Receipt Amount = Total Purchases + Service Charge + Exempt + Zero Rated + Total Input Tax
+    const total_receipt = total_purchases + service_charge + exempt + zero_rated + total_input_tax;
     totalReceiptInput.value = total_receipt.toFixed(2);
 }
 

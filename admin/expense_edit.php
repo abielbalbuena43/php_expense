@@ -89,12 +89,16 @@ if (isset($_POST['update_expense'])) {
 ";
 
     if (mysqli_query($conn, $query)) {
-        $_SESSION['alert'] = "success_update";
-        header("Location: expenses.php");
-        exit();
-    } else {
-        $_SESSION['alert'] = "error_update";
-    }
+    // Log the action
+    $logQuery = "INSERT INTO logs (log_action, log_user, log_details, log_date) VALUES ('Expense updated', '" . mysqli_real_escape_string($conn, $_SESSION['username']) . "', 'Expense ID: $expense_id', NOW())";
+    mysqli_query($conn, $logQuery);
+    
+    $_SESSION['alert'] = "success_update";
+    header("Location: expenses.php");
+    exit();
+} else {
+    $_SESSION['alert'] = "error_update";
+}
 }
 
 $alert = $_SESSION['alert'] ?? null;

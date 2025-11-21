@@ -9,6 +9,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id']) && $_POS
     $deleteStmt = $conn->prepare("DELETE FROM expenses WHERE expense_id = ?");
     $deleteStmt->bind_param("i", $deleteId);
     if ($deleteStmt->execute()) {
+        // Log the action
+        $logQuery = "INSERT INTO logs (log_action, log_user, log_details, log_date) VALUES ('Expense deleted', '" . mysqli_real_escape_string($conn, $_SESSION['username']) . "', 'Expense ID: $deleteId', NOW())";
+        mysqli_query($conn, $logQuery);
+        
         $_SESSION['alert'] = 'success';  // For display in header/footer if needed
     } else {
         $_SESSION['alert'] = 'error';
