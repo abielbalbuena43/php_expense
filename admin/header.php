@@ -94,6 +94,10 @@ $status = "Active";
             <a href="logs.php"><i class="icon icon-user"></i><span>Logs</span></a>
         </li>
 
+        <li class="<?php echo ($current_page == 'reports.php') ? 'active' : ''; ?>">
+            <a href="reports.php"><i class="icon icon-user"></i><span>Reports</span></a>
+        </li>
+
         <!-- Special Fields Dropdown -->
         <li class="submenu <?php echo (in_array($current_page, ['resellers.php','end_users.php','products.php'])) ? 'active open' : ''; ?>">
             <a href="#"><i class="icon icon-tags"></i> <span>Special Fields</span> <span class="label label-important"></span></a>
