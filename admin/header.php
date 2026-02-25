@@ -116,20 +116,24 @@ $status = "Active";
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
 <script>
 $(document).ready(function() {
-    // If using Bootstrap, this should handle dropdowns automatically
+    // Fix: Prevent dropdown from closing immediately on first click
     $('.submenu > a').on('click', function(e) {
-        e.preventDefault();  // Prevent default link behavior
-        var submenu = $(this).next('ul');  // Get the submenu ul
-        if (submenu.is(':visible')) {
-            submenu.slideUp();  // Hide if visible
+        e.preventDefault();
+        var parentLi = $(this).parent('li');
+        var submenu = parentLi.find('ul');
+        
+        // Toggle the submenu - only works if we check current state properly
+        if (submenu.is(':hidden')) {
+            submenu.slideDown();
+            parentLi.addClass('open');
         } else {
-            submenu.slideDown();  // Show if hidden
+            submenu.slideUp();
+            parentLi.removeClass('open');
         }
-    });
-    
-    // Optional: Close other submenus if one is opened (for better UX)
-    $('.submenu > a').on('click', function() {
-        $('.submenu ul:visible').not($(this).next('ul')).slideUp();  // Close other visible submenus
+        
+        // Close other submenus when opening a new one
+        $('.submenu').not(parentLi).find('ul').slideUp();
+        $('.submenu').not(parentLi).removeClass('open');
     });
 });
 </script>
