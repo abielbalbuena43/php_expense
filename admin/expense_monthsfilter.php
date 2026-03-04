@@ -415,6 +415,43 @@ $(document).ready(function() {
         }
     });
 
+    // ======== PASTE COMPANY CHART HERE ========
+    var companyCtx = document.getElementById('companyChart').getContext('2d');
+    var companyChart = new Chart(companyCtx, {
+        type: 'bar',
+        data: {
+            labels: <?php echo $companyLabelsJSON; ?>,
+            datasets: [{
+                label: 'Total Amount',
+                data: <?php echo $companyValuesJSON; ?>,
+                backgroundColor: '#3498db',
+                borderColor: '#2980b9',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '₱' + value.toLocaleString();
+                        }
+                    }
+                },
+                x: {
+                    ticks: {
+                        autoSkip: false,
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            }
+        }
+    });
+
     // Daily Line Chart
 var dailyCtx = document.getElementById('dailyChart').getContext('2d');
 var dailyChart = new Chart(dailyCtx, {

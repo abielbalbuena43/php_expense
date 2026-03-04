@@ -207,6 +207,73 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
     </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const submenuLinks = document.querySelectorAll('#sidebar .submenu > a');
+
+    submenuLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const parent = this.parentElement;
+            const ul = parent.querySelector('ul');
+
+            if (!ul) return;
+
+            // Close other submenus
+            document.querySelectorAll('#sidebar .submenu').forEach(other => {
+                if (other !== parent) {
+                    const otherUl = other.querySelector('ul');
+                    if (otherUl) {
+                        otherUl.style.height = '0';
+                        otherUl.style.overflow = 'hidden';
+                        other.classList.remove('open');
+                    }
+                }
+            });
+
+            // Toggle current submenu
+            if (!parent.classList.contains('open')) {
+                ul.style.display = 'block';
+                const height = ul.scrollHeight;
+                ul.style.height = '0';
+                ul.style.overflow = 'hidden';
+
+                setTimeout(() => {
+                    ul.style.transition = 'height 0.5s ease';
+                    ul.style.height = height + 'px';
+                }, 10);
+
+                ul.addEventListener('transitionend', function te() {
+                    ul.style.height = 'auto'; // Allow natural height after animation
+                    ul.style.transition = '';
+                    ul.style.overflow = '';
+                    ul.removeEventListener('transitionend', te);
+                });
+
+                parent.classList.add('open');
+            } else {
+                ul.style.height = ul.scrollHeight + 'px';
+                ul.style.overflow = 'hidden';
+
+                setTimeout(() => {
+                    ul.style.transition = 'height 0.5s ease';
+                    ul.style.height = '0';
+                }, 10);
+
+                ul.addEventListener('transitionend', function te() {
+                    ul.style.display = 'none';
+                    ul.style.transition = '';
+                    ul.style.overflow = '';
+                    ul.style.height = '';
+                    parent.classList.remove('open');
+                    ul.removeEventListener('transitionend', te);
+                });
+            }
+        });
+    });
+});
+</script>
+
 <!-- Chart.js Integration -->
 <script>
     const chartColors = [

@@ -100,7 +100,7 @@ $status = "Active";
 
         <!-- Special Fields Dropdown -->
         <li class="submenu <?php echo (in_array($current_page, ['resellers.php','end_users.php','products.php'])) ? 'active open' : ''; ?>">
-            <a href="#"><i class="icon icon-tags"></i> <span>Special Fields</span> <span class="label label-important"></span></a>
+            <a href="javascript:void(0)"><i class="icon icon-tags"></i> <span>Special Fields</span> <span class="label label-important"></span></a>
             <ul>
                 <li><a href="resellers.php">Resellers</a></li>
                 <li><a href="end_users.php">End Users</a></li>
@@ -111,32 +111,6 @@ $status = "Active";
     </ul>
 </div>
 
-<!-- JavaScript Files -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-<script>
-$(document).ready(function() {
-    // Fix: Prevent dropdown from closing immediately on first click
-    $('.submenu > a').on('click', function(e) {
-        e.preventDefault();
-        var parentLi = $(this).parent('li');
-        var submenu = parentLi.find('ul');
-        
-        // Toggle the submenu - only works if we check current state properly
-        if (submenu.is(':hidden')) {
-            submenu.slideDown();
-            parentLi.addClass('open');
-        } else {
-            submenu.slideUp();
-            parentLi.removeClass('open');
-        }
-        
-        // Close other submenus when opening a new one
-        $('.submenu').not(parentLi).find('ul').slideUp();
-        $('.submenu').not(parentLi).removeClass('open');
-    });
-});
-</script>
 
 <!-- Logout Button (moved inside the body) -->
 <div id="search" style="margin-bottom: 20px; padding: 10px;">

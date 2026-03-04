@@ -13,14 +13,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id']) && $_POS
         $logQuery = "INSERT INTO logs (log_action, log_user, log_details, log_date) VALUES ('Expense deleted', '" . mysqli_real_escape_string($conn, $_SESSION['username']) . "', 'Expense ID: $deleteId', NOW())";
         mysqli_query($conn, $logQuery);
         
-        $_SESSION['alert'] = 'success';  // For display in header/footer if needed
+        $_SESSION['alert'] = 'success';
     } else {
         $_SESSION['alert'] = 'error';
     }
     $deleteStmt->close();
-    // Preserve filter state (including all=0)
+    
+    // Preserve filter state
     $redirect = $_SERVER['PHP_SELF'];
-    if (isset($_GET['month'])) $redirect .= '?month=' . intval($_GET['month']);
+    if (isset($_GET['month'])) $redirect .= '?month=' . (is_array($_GET['month']) ? implode(',', $_GET['month']) : $_GET['month']);
     if (isset($_GET['year'])) $redirect .= (strpos($redirect, '?') !== false ? '&' : '?') . 'year=' . intval($_GET['year']);
     header("Location: $redirect");
     exit();
@@ -31,16 +32,21 @@ if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-// Fetch expense records (filtered by transaction dates OR all if cleared)
-$selectedMonth = intval($_GET['month'] ?? date('m'));  // Default to current if no param
-$selectedYear = intval($_GET['year'] ?? date('Y'));   // Default to current if no param
+// --- UPDATED LOGIC FOR MULTI-SELECT ---
+// Get months as an array. If empty, it means "All".
+$selectedMonths = isset($_GET['month']) ? (array)$_GET['month'] : [];
+$selectedYear = isset($_GET['year']) ? intval($_GET['year']) : date('Y');
 
+// Check if "All Months" (0) is selected or if array is empty
+$showAllMonths = (empty($selectedMonths) || in_array(0, $selectedMonths));
+
+// Build the SQL Query
 $sql = "
     SELECT 
         e.expense_id,
         e.expense_or_number,
         e.expense_date,
-        e.expense_total_receipt_amount,  -- For amount column
+        e.expense_total_receipt_amount,
         c.company_name,
         p.payee_name,
         cat.category_name
@@ -52,13 +58,23 @@ $sql = "
 
 $params = [];
 $types = "";
-if ($selectedMonth > 0 && $selectedYear > 0) {
-    $sql .= " WHERE MONTH(e.expense_date) = ? AND YEAR(e.expense_date) = ?";
-    $params = [$selectedMonth, $selectedYear];
-    $types = "ii";
+
+if (!$showAllMonths && $selectedYear > 0) {
+    // Sanitize the months array to integers
+    $cleanMonths = array_map('intval', $selectedMonths);
+    $monthPlaceholders = implode(',', array_fill(0, count($cleanMonths), '?'));
+    
+    $sql .= " WHERE MONTH(e.expense_date) IN ($monthPlaceholders) AND YEAR(e.expense_date) = ?";
+    $params = array_merge($cleanMonths, [$selectedYear]);
+    $types = str_repeat('i', count($cleanMonths)) . 'i';
+} elseif ($selectedYear > 0) {
+    // If no months selected but year is, show all months for that year
+    $sql .= " WHERE YEAR(e.expense_date) = ?";
+    $params = [$selectedYear];
+    $types = 'i';
 }
 
-$sql .= " ORDER BY e.expense_date DESC, e.expense_id DESC LIMIT 100";  // Limit for performance (all or filtered)
+$sql .= " ORDER BY e.expense_date DESC, e.expense_id DESC LIMIT 100";
 
 $stmt = $conn->prepare($sql);
 if (!empty($params)) {
@@ -69,17 +85,26 @@ $result = $stmt->get_result();
 $stmt->close();
 
 // Format selected period label
-if ($selectedMonth > 0 && $selectedYear > 0) {
-    $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedYear));
-    $viewingLabel = "Viewing Expenses for: $selectedPeriodLabel";
+if (!$showAllMonths && $selectedYear > 0) {
+    $monthNames = [
+        '01' => 'January', '02' => 'February', '03' => 'March', '04' => 'April', 
+        '05' => 'May', '06' => 'June', '07' => 'July', '08' => 'August', 
+        '09' => 'September', '10' => 'October', '11' => 'November', '12' => 'December'
+    ];
+    $displayMonths = [];
+    foreach ($selectedMonths as $m) {
+        if(isset($monthNames[$m])) $displayMonths[] = $monthNames[$m];
+    }
+    $viewingLabel = "Viewing Expenses for: " . implode(', ', $displayMonths) . " " . $selectedYear;
 } else {
     $viewingLabel = "Viewing All Expenses";
 }
 
-// Build report link (preserves current filters)
+// Build report link
 $reportLink = "reports.php";
-if ($selectedMonth > 0 || $selectedYear > 0) {
-    $reportLink .= "?month=" . ($selectedMonth > 0 ? $selectedMonth : '') . "&year=" . ($selectedYear > 0 ? $selectedYear : '');
+if (!$showAllMonths || $selectedYear > 0) {
+    $monthParam = is_array($selectedMonths) ? implode(',', $selectedMonths) : $selectedMonths;
+    $reportLink .= "?month=" . $monthParam . "&year=" . $selectedYear;
 }
 ?>
 
@@ -93,19 +118,21 @@ if ($selectedMonth > 0 || $selectedYear > 0) {
 
     <div class="container-fluid">
 
-        <!-- Action Button & Filter (uniform with dashboard) -->
+        <!-- Action Button & Filter -->
         <div class="row-fluid">
             <div class="span12">
                 <a href="expense_new.php" class="btn btn-success" style="margin-bottom:15px;">
                     <i class="icon-plus"></i> Create New Expense
                 </a>
                 
-                <!-- Small Filter Dropdown -->
+                <!-- Filter Section -->
                 <div class="filter-section" style="display: inline-block; margin-left: 20px; vertical-align: middle;">
                     <form method="get" id="filterForm" style="display: inline;">
                         <label style="margin-right: 10px; font-weight: bold; font-size: 14px;">Filter by Transaction Month:</label>
-                        <select name="month" style="margin-right: 5px; padding: 5px; font-size: 14px;">
-                            <option value="0" <?= ($selectedMonth == 0) ? 'selected' : '' ?>>All Months</option>
+                        
+                        <!-- FIXED: Added id="monthFilter" for JavaScript -->
+                        <select name="month[]" id="monthFilter" class="form-control" style="width: 200px; margin-right: 5px; padding: 5px; font-size: 14px;">
+                            <option value="0" <?= (empty($selectedMonths) || in_array(0, $selectedMonths)) ? 'selected' : '' ?>>All Months</option>
                             <?php 
                             $months = [
                                 '01' => 'January', '02' => 'February', '03' => 'March', '04' => 'April', 
@@ -113,11 +140,12 @@ if ($selectedMonth > 0 || $selectedYear > 0) {
                                 '09' => 'September', '10' => 'October', '11' => 'November', '12' => 'December'
                             ];
                             foreach ($months as $val => $name) {
-                                $selected = ($val == $selectedMonth) ? 'selected' : '';
+                                $selected = in_array($val, $selectedMonths) ? 'selected' : '';
                                 echo "<option value='$val' $selected>$name</option>";
                             }
                             ?>
                         </select>
+
                         <select name="year" style="margin-right: 10px; padding: 5px; font-size: 14px;">
                             <option value="0" <?= ($selectedYear == 0) ? 'selected' : '' ?>>All Years</option>
                             <?php 
@@ -136,17 +164,17 @@ if ($selectedMonth > 0 || $selectedYear > 0) {
             </div>
         </div>
 
-        <!-- Expenses Table (uniform with dashboard.css) -->
+        <!-- Expenses Table -->
         <div class="row-fluid">
             <div class="span12">
                 <div class="widget-box">
                     <div class="widget-content nopadding">
-                        <table class="table table-bordered table-striped" id="expensesTable">  <!-- Bootstrap for DataTables base -->
+                        <table class="table table-bordered table-striped" id="expensesTable">
                             <thead>
                                 <tr>
                                     <th>ID</th>
                                     <th>OR Number</th>
-                                    <th>Date</th>  <!-- Transaction date (expense_date) -->
+                                    <th>Date</th>
                                     <th>Company</th>
                                     <th>Payee</th>
                                     <th>Category</th>
@@ -167,7 +195,6 @@ if ($selectedMonth > 0 || $selectedYear > 0) {
                                             <td>₱<?php echo number_format($row['expense_total_receipt_amount'], 2); ?></td>
                                             <td style="white-space: nowrap;">
                                                 <a href="expense_view.php?id=<?php echo $row['expense_id']; ?>" class="btn btn-info btn-mini" style="font-size: 12px;">View</a>
-                                                <!-- POST Delete Form -->
                                                 <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this expense?');">
                                                     <input type="hidden" name="delete_id" value="<?php echo $row['expense_id']; ?>">
                                                     <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
@@ -179,7 +206,7 @@ if ($selectedMonth > 0 || $selectedYear > 0) {
                                 <?php else: ?>
                                     <tr>
                                         <td colspan="8" style="text-align:center; padding: 20px; font-size: 14px;">
-                                            <?php if ($selectedMonth > 0 && $selectedYear > 0): ?>
+                                            <?php if (!$showAllMonths && $selectedYear > 0): ?>
                                                 No expenses found for the selected period.
                                             <?php else: ?>
                                                 No expenses found.
@@ -208,19 +235,48 @@ if ($selectedMonth > 0 || $selectedYear > 0) {
 
 <?php include "footer.php"; ?>
 
+<!-- Bootstrap Multiselect CSS (Only if not already in header.php) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/1.0.1/css/bootstrap-multiselect.css" />
+
+<!-- jQuery (Only if not already loaded in header.php) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Bootstrap Multiselect JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-multiselect/1.0.1/js/bootstrap-multiselect.min.js"></script>
+
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap.min.js"></script>
+
 <script>
 $(document).ready(function() {
-    // Clear Filter functionality
-    $('#clearFilter').click(function() {
-        $('select[name="month"]').val(0);
-        $('select[name="year"]').val(0);
-        $('#filterForm').submit();  // Submit to reload with all
+    // Initialize Bootstrap Multiselect for the Month Filter
+    $('#monthFilter').multiselect({
+        includeSelectAllOption: true,
+        selectAllText: 'Select All Months',
+        numberDisplayed: 3,
+        nonSelectedText: 'Select Months',
+        buttonWidth: '200px',
+        onChange: function(option, checked, select) {
+            // Optional: Auto-submit when selection changes
+            // $('#filterForm').submit(); 
+        }
     });
 
+    // Clear Filter functionality
+    $('#clearFilter').click(function() {
+        // Reset Multiselect to "All Months" (value 0)
+        $('#monthFilter').multiselect('deselect', '0');
+        $('#monthFilter').multiselect('select', '0');
+        $('select[name="year"]').val(0);
+        $('#filterForm').submit();
+    });
+
+    // DataTables Initialization
     $('#expensesTable').DataTable({
         "scrollX": true,
-        "pageLength": 25,  // Show 25 rows per page for better UX
-        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]  // Pagination options
+        "pageLength": 25,
+        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]]
     });
 });
 </script>
