@@ -99,27 +99,45 @@ $status = "Active";
         </li>
 
         <!-- Reports Dropdown -->
-        <li class="submenu <?php echo (in_array($current_page, ['reports.php','expense_vs_budget.php'])) ? 'active open' : ''; ?>">
+        <li class="submenu <?php echo (in_array($current_page, ['reports.php','expense_budget.php'])) ? 'active open' : ''; ?>">
             <a href="javascript:void(0)">
                 <i class="icon icon-bar-chart"></i>
                 <span>Reports</span>
                 <span class="label label-important"></span>
             </a>
             <ul>
-                <li><a href="reports.php">Expense Reports</a></li>
-                <li><a href="expense_budget.php">Expense vs Budget</a></li>
+                <li class="<?php echo ($current_page == 'reports.php') ? 'active' : ''; ?>">
+                    <a href="reports.php">Expense Reports</a>
+                </li>
+
+                <li class="<?php echo ($current_page == 'expense_budget.php') ? 'active' : ''; ?>">
+                    <a href="expense_budget.php">Expense vs Budget</a>
+                </li>
             </ul>
         </li>
 
         <!-- Special Fields Dropdown -->
-        <li class="submenu <?php echo (in_array($current_page, ['resellers.php','end_users.php','products.php'])) ? 'active open' : ''; ?>">
-            <a href="javascript:void(0)"><i class="icon icon-tags"></i> <span>Special Fields</span> <span class="label label-important"></span></a>
-            <ul>
-                <li><a href="resellers.php">Resellers</a></li>
-                <li><a href="end_users.php">End Users</a></li>
-                <li><a href="products.php">Products</a></li>
-            </ul>
-        </li>
+            <li class="submenu <?php echo (in_array($current_page, ['resellers.php','end_users.php','products.php'])) ? 'active open' : ''; ?>">
+                <a href="javascript:void(0)">
+                    <i class="icon icon-tags"></i>
+                    <span>Special Fields</span>
+                    <span class="label label-important"></span>
+                </a>
+
+                <ul>
+                    <li class="<?php echo ($current_page == 'resellers.php') ? 'active' : ''; ?>">
+                        <a href="resellers.php">Resellers</a>
+                    </li>
+
+                    <li class="<?php echo ($current_page == 'end_users.php') ? 'active' : ''; ?>">
+                        <a href="end_users.php">End Users</a>
+                    </li>
+
+                    <li class="<?php echo ($current_page == 'products.php') ? 'active' : ''; ?>">
+                        <a href="products.php">Products</a>
+                    </li>
+                </ul>
+            </li>
 
     </ul>
 </div>
