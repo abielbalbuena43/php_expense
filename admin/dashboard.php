@@ -37,9 +37,22 @@ $topCategoryRow = $topCategoryResult->fetch_assoc();
 $topCategory = $topCategoryRow['category_name'] ?? "None";
 $topCategoryStmt->close();
 
-// Placeholder Budget Utilization (based on selected total)
-$budgetTotal = 50000; // Example budget amount (make dynamic later)
-$budgetUtilization = $budgetTotal > 0 ? ($totalExpenses / $budgetTotal) * 100 : 0;
+// Fetch budget for selected month/year
+$budgetStmt = $conn->prepare("SELECT amount FROM budgets WHERE month = ? AND year = ? LIMIT 1");
+$budgetStmt->bind_param("ii", $selectedMonth, $selectedYear);
+$budgetStmt->execute();
+$budgetResult = $budgetStmt->get_result();
+$budgetRow = $budgetResult->fetch_assoc();
+$budgetTotal = $budgetRow['amount'] ?? null; // Null if not yet set
+$budgetStmt->close();
+
+// Calculate utilization if budget exists
+if ($budgetTotal !== null && $budgetTotal > 0) {
+    $budgetUtilization = ($totalExpenses / $budgetTotal) * 100;
+    $budgetDisplay = number_format($budgetUtilization, 2) . '%';
+} else {
+    $budgetDisplay = "NOT YET SET";
+}
 
 // ---------- Chart Data ----------
 // Pie Chart - Expense Breakdown by Category (Selected Month/Year) - Prepared
@@ -150,7 +163,7 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
             </div>
             <div class="summary-box">
                 <h4>BUDGET UTILIZATION</h4>
-                <p><?= number_format($budgetUtilization, 2) ?>%</p>
+                <p><?= htmlspecialchars($budgetDisplay) ?></p>
             </div>
             <div class="summary-box">
                 <h4>TOP EXPENSE CATEGORY</h4>

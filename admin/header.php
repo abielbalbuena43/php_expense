@@ -74,6 +74,10 @@ $status = "Active";
             <a href="expenses.php"><i class="icon icon-money"></i><span>Expenses</span></a>
         </li>
 
+        <li class="<?php echo ($current_page == 'budgets.php') ? 'active' : ''; ?>">
+            <a href="budgets.php"><i class="icon icon-money"></i><span>Budgets</span></a>
+        </li>
+
         <li class="<?php echo ($current_page == 'payees.php') ? 'active' : ''; ?>">
             <a href="payees.php"><i class="icon icon-briefcase"></i><span>Payees</span></a>
         </li>
@@ -94,8 +98,17 @@ $status = "Active";
             <a href="logs.php"><i class="icon icon-user"></i><span>Logs</span></a>
         </li>
 
-        <li class="<?php echo ($current_page == 'reports.php') ? 'active' : ''; ?>">
-            <a href="reports.php"><i class="icon icon-user"></i><span>Reports</span></a>
+        <!-- Reports Dropdown -->
+        <li class="submenu <?php echo (in_array($current_page, ['reports.php','expense_vs_budget.php'])) ? 'active open' : ''; ?>">
+            <a href="javascript:void(0)">
+                <i class="icon icon-bar-chart"></i>
+                <span>Reports</span>
+                <span class="label label-important"></span>
+            </a>
+            <ul>
+                <li><a href="reports.php">Expense Reports</a></li>
+                <li><a href="expense_budget.php">Expense vs Budget</a></li>
+            </ul>
         </li>
 
         <!-- Special Fields Dropdown -->
