@@ -31,7 +31,7 @@ if (isset($_POST['update_category'])) {
     ";
 
     if (mysqli_query($conn, $query)) {
-        $_SESSION['alert'] = "success_update";
+        $_SESSION['alert'] = "Category updated successfully!";
         header("Location: categories.php");
         exit();
     } else {
@@ -43,27 +43,21 @@ $alert = $_SESSION['alert'] ?? null;
 unset($_SESSION['alert']);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="categories.php" class="tip-bottom"><i class="icon-home"></i> Categories</a>
-            <a href="#" class="current">Edit Category</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
-        <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
+        <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
 
-                <?php if ($alert == "success_update") { ?>
+                <?php if ($alert == "Category updated successfully!") { ?>
                     <div class="alert alert-success">Category updated successfully!</div>
                 <?php } elseif ($alert == "error_update") { ?>
                     <div class="alert alert-danger">Error: Unable to update category.</div>
                 <?php } ?>
 
-                <div class="widget-box" style="max-width: 600px; margin: 0 auto;">
+                <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-edit"></i></span>
                         <h5>Edit Category Information</h5>
                     </div>
 

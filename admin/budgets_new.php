@@ -4,6 +4,16 @@ include "connection.php";
 include "header.php";
 
 /* -------------------------------
+   ALERT HELPER
+--------------------------------*/
+function setAlert($type, $message) {
+    $_SESSION['alert'] = [
+        'type' => $type,
+        'message' => $message
+    ];
+}
+
+/* -------------------------------
    CSRF TOKEN
 --------------------------------*/
 if (!isset($_SESSION['csrf_token'])) {
@@ -28,67 +38,76 @@ if (isset($_POST['submit_budget'])) {
     $checkStmt->close();
 
     if ($count > 0) {
-        $_SESSION['alert'] = 'error';
-        $_SESSION['alert_msg'] = "A budget for $month/$year already exists.";
+
+        setAlert('error', 'A budget for this period already exists.');
+
     } else {
-        $insertStmt = $conn->prepare("INSERT INTO budgets (month, year, amount, created_at) VALUES (?, ?, ?, NOW())");
+
+        $insertStmt = $conn->prepare("
+            INSERT INTO budgets (month, year, amount, created_at)
+            VALUES (?, ?, ?, NOW())
+        ");
         $insertStmt->bind_param("iid", $month, $year, $amount);
 
         if ($insertStmt->execute()) {
+
             // Log creation
             $budget_id = $insertStmt->insert_id;
             $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
             $logQuery = "
                 INSERT INTO logs (log_action, log_user, log_details, log_date)
                 VALUES ('Budget created', '$username', 'Budget ID: $budget_id', NOW())
             ";
             mysqli_query($conn, $logQuery);
 
-            $_SESSION['alert'] = 'success';
-            $_SESSION['alert_msg'] = "Budget for $month/$year created successfully.";
-            header("Location: budgets.php");
+            header("Location: budgets.php?success=added");
             exit();
+
         } else {
-            $_SESSION['alert'] = 'error';
-            $_SESSION['alert_msg'] = "Database error: " . $conn->error;
+
+            setAlert('error', 'Database error: ' . $conn->error);
+
         }
 
         $insertStmt->close();
     }
 }
-
-$alert = $_SESSION['alert'] ?? null;
-$alert_msg = $_SESSION['alert_msg'] ?? null;
-unset($_SESSION['alert'], $_SESSION['alert_msg']);
 ?>
 
+<link rel="stylesheet" href="css/layout.css">
+
 <div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="budgets.php" class="tip-bottom"><i class="icon-home"></i> Budgets</a>
-            <a href="#" class="current">Add New Budget</a>
-        </div>
-    </div>
-
     <div class="container-fluid">
-        <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
-            <div class="span6 offset3">
+        <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
+            <div class="span12">
 
-                <?php if ($alert): ?>
-                    <div class="alert alert-<?php echo ($alert == 'success') ? 'success' : 'danger'; ?>">
-                        <?php echo htmlspecialchars($alert_msg); ?>
-                    </div>
+                <?php if (isset($_SESSION['alert'])): ?>
+
+                <?php
+                $alert = $_SESSION['alert'];
+                $type = $alert['type'] ?? 'info';
+                $message = $alert['message'] ?? '';
+                unset($_SESSION['alert']);
+                ?>
+
+                <div class="alert alert-<?= $type ?>">
+                    <?= htmlspecialchars($message) ?>
+                </div>
+
                 <?php endif; ?>
 
-                <div class="widget-box">
+                <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
+
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-align-justify"></i></span>
                         <h5>Budget Information</h5>
                     </div>
 
                     <div class="widget-content" style="padding:20px;">
+
                         <form method="post" class="form-horizontal">
 
+                            <!-- Month -->
                             <div class="control-group">
                                 <label class="control-label">Month:</label>
                                 <div class="controls">
@@ -107,6 +126,7 @@ unset($_SESSION['alert'], $_SESSION['alert_msg']);
                                 </div>
                             </div>
 
+                            <!-- Year -->
                             <div class="control-group">
                                 <label class="control-label">Year:</label>
                                 <div class="controls">
@@ -121,6 +141,7 @@ unset($_SESSION['alert'], $_SESSION['alert_msg']);
                                 </div>
                             </div>
 
+                            <!-- Amount -->
                             <div class="control-group">
                                 <label class="control-label">Amount:</label>
                                 <div class="controls">
@@ -128,13 +149,21 @@ unset($_SESSION['alert'], $_SESSION['alert_msg']);
                                 </div>
                             </div>
 
+                            <!-- Actions -->
                             <div class="form-actions" style="padding-left:180px;">
-                                <button type="submit" name="submit_budget" class="btn btn-success">Save Budget</button>
-                                <a href="budgets.php" class="btn btn-secondary">Cancel</a>
+                                <button type="submit" name="submit_budget" class="btn btn-success">
+                                    Save Budget
+                                </button>
+
+                                <a href="budgets.php" class="btn btn-secondary">
+                                    Cancel
+                                </a>
                             </div>
 
                         </form>
+
                     </div>
+
                 </div>
 
             </div>

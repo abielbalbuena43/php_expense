@@ -1,10 +1,9 @@
 <?php
-ob_start();
 session_start();
 include "header.php";
 include "connection.php";
 
-// Check if an End User ID is provided
+// Check if End User ID is provided
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     $_SESSION['alert'] = "invalid";
     header("Location: end_users.php");
@@ -13,19 +12,17 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 
 $end_user_id = intval($_GET['id']);
 
-// Fetch the End User details for confirmation
+// Fetch End User details for confirmation
 $query = "
     SELECT 
         end_user_id,
-        end_user_name,
-        created_at
+        end_user_name
     FROM expense_end_users
-    WHERE end_user_id = $end_user_id
+    WHERE end_user_id = '$end_user_id'
+    LIMIT 1
 ";
-
 $result = mysqli_query($conn, $query);
 
-// If no End User found, redirect
 if (!$result || mysqli_num_rows($result) === 0) {
     $_SESSION['alert'] = "not_found";
     header("Location: end_users.php");
@@ -36,10 +33,10 @@ $end_user = mysqli_fetch_assoc($result);
 
 // Handle delete confirmation
 if (isset($_POST['confirm_delete'])) {
-    $delete_query = "DELETE FROM expense_end_users WHERE end_user_id = $end_user_id";
+    $delete_query = "DELETE FROM expense_end_users WHERE end_user_id = '$end_user_id'";
 
     if (mysqli_query($conn, $delete_query)) {
-        $_SESSION['alert'] = "deleted";
+        $_SESSION['alert'] = "End User deleted successfully!";
         header("Location: end_users.php");
         exit();
     } else {
@@ -48,39 +45,31 @@ if (isset($_POST['confirm_delete'])) {
 }
 
 // Alert messages
-if (isset($_SESSION['alert'])) {
-    $alert = $_SESSION['alert'];
-    unset($_SESSION['alert']);
-} else {
-    $alert = null;
-}
+$alert = $_SESSION['alert'] ?? null;
+unset($_SESSION['alert']);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="end_users.php" class="tip-bottom"><i class="icon-home"></i> End Users</a>
-            <a href="#" class="current">Delete End User</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
-        <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
+        <div class="row-fluid" style="background-color: white; min-height: 300px; padding: 20px;">
             <div class="span12">
 
-                <!-- Alert Messages -->
+                <!-- Display alert messages -->
                 <?php if ($alert == "error") { ?>
-                    <div class="alert alert-danger">Error: Unable to delete end user.</div>
+                    <div class="alert alert-danger">Error: Unable to delete End User.</div>
                 <?php } elseif ($alert == "invalid") { ?>
                     <div class="alert alert-warning">Invalid End User ID.</div>
                 <?php } elseif ($alert == "not_found") { ?>
                     <div class="alert alert-warning">End User not found.</div>
+                <?php } elseif ($alert == "End User deleted successfully!") { ?>
+                    <div class="alert alert-success">End User deleted successfully!</div>
                 <?php } ?>
 
-                <!-- Delete Confirmation -->
-                <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
+                <!-- Delete Confirmation Form -->
+                <div class="widget-box" style="max-width: 600px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-trash"></i></span>
                         <h5>Delete End User Confirmation</h5>
                     </div>
 
@@ -95,10 +84,6 @@ if (isset($_SESSION['alert'])) {
                             <tr>
                                 <th>Name</th>
                                 <td><?= htmlspecialchars($end_user['end_user_name']) ?></td>
-                            </tr>
-                            <tr>
-                                <th>Date Created</th>
-                                <td><?= htmlspecialchars($end_user['created_at']) ?></td>
                             </tr>
                         </table>
 

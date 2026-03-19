@@ -269,21 +269,14 @@ if ($result && $result->num_rows > 0) {
 $reportTitle = "Expense Report from " . date('M d, Y', strtotime($start_date)) . " to " . date('M d, Y', strtotime($end_date));
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="dashboard.php" class="tip-bottom"><i class="icon-home"></i> Home</a>
-            <a href="expenses.php" class="tip-bottom">Expenses</a>
-            <a href="#" class="current">Expense Reports</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
         <div class="row-fluid">
             <div class="span12">
                 <div class="widget-box">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-bar-chart"></i></span>
                         <h5><?php echo htmlspecialchars($reportTitle); ?></h5>
                         <div class="buttons" style="float: right;">
                             <a href="javascript:window.print();" class="btn btn-primary btn-mini"><i class="icon-print"></i> Print Report</a>

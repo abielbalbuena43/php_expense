@@ -17,75 +17,163 @@ $sql = "
 $result = $conn->query($sql);
 ?>
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resellers List</title>
+    
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/layout.css">
+
+    <!-- Icons -->
+    <link href="font-awesome/css/font-awesome.css" rel="stylesheet">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+</head>
+<body>
+
 <div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="dashboard.php" class="tip-bottom"><i class="icon-home"></i> Home</a>
-            <a href="resellers.php" class="current">Resellers</a>
-        </div>
-    </div>
 
-    <div class="container-fluid">
+<?php if (isset($_SESSION['alert'])): ?>
 
-        <!-- Action Button -->
-        <div class="row-fluid">
-            <div class="span12">
-                <a href="resellers_new.php" class="btn btn-success" style="margin-bottom:15px;">
-                    <i class="icon-plus"></i> Add New Reseller
-                </a>
-            </div>
-        </div>
+<?php
+$alert = $_SESSION['alert'];
 
-        <!-- Resellers Table -->
-        <div class="row-fluid">
-            <div class="span12">
-                <div class="widget-box">
-                    <div class="widget-content nopadding">
-                        <table class="table table-bordered table-striped" id="resellersTable">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Reseller Name</th>
-                                    <th>Total Linked Expenses</th>
-                                    <th>Date Created</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if ($result && $result->num_rows > 0): ?>
-                                    <?php while ($row = $result->fetch_assoc()): ?>
-                                        <tr>
-                                            <td><?php echo $row['reseller_id']; ?></td>
-                                            <td><?php echo htmlspecialchars($row['reseller_name']); ?></td>
-                                            <td><?php echo $row['total_expenses']; ?></td>
-                                            <td><?php echo date('M d, Y', strtotime($row['reseller_created_at'])); ?></td>
-                                            <td style="white-space: nowrap;">
-                                                <a href="resellers_view.php?id=<?php echo $row['reseller_id']; ?>" class="btn btn-info btn-mini">View</a>
-                                                <a href="resellers_delete.php?id=<?php echo $row['reseller_id']; ?>" class="btn btn-danger btn-mini" onclick="return confirm('Are you sure you want to delete this reseller?');">Delete</a>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="5" style="text-align:center;">No resellers found.</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+if (is_array($alert)) {
+    $type = $alert['type'] ?? 'info';
+    $message = $alert['message'] ?? 'Something happened.';
+} else {
+    // fallback for old string alerts
+    $type = 'success';
+    $message = $alert;
+}
 
-    </div>
+unset($_SESSION['alert']);
+?>
+
+<div class="alert alert-<?= $type ?>">
+    <?= htmlspecialchars($message) ?>
 </div>
 
-<?php include "footer.php"; ?>
+<?php endif; ?>
+
+<div class="container-fluid">
+
+<!-- Header Actions -->
+
+<div class="header-actions">
+
+<a href="resellers_new.php" class="btn btn-success" >
+<i class="icon-plus"></i>
+Create New Reseller
+</a>
+
+</div>
+
+<!-- Main Table -->
+
+<div class="table-container">
+
+<div class="table-header">
+
+<h3>
+Resellers List
+</h3>
+
+<span class="table-stats">
+Showing <?= $result->num_rows ?? 0 ?> records
+</span>
+
+</div>
+
+<div class="table-responsive">
+
+<table>
+
+<thead>
+
+<tr>
+<th>Reseller Name</th>
+<th>Total Linked Expenses</th>
+<th>Date Created</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<?php if ($result && $result->num_rows > 0): ?>
+
+<?php while ($row = $result->fetch_assoc()): ?>
+
+<tr
+class="clickable-row"
+data-href="resellers_view.php?id=<?= $row['reseller_id'] ?>"
+>
+
+<td><?= htmlspecialchars($row['reseller_name']) ?></td>
+<td><?= $row['total_expenses'] ?></td>
+<td><?= date('M d, Y', strtotime($row['reseller_created_at'])) ?></td>
+</tr>
+
+<?php endwhile; ?>
+
+<?php else: ?>
+
+<tr>
+
+<td colspan="4">
+
+<div class="empty-state">
+
+<i class="icon-inbox"></i>
+
+<h4>No resellers found</h4>
+
+<p>
+No resellers available.
+Create a new reseller to get started.
+</p>
+
+</div>
+
+</td>
+
+</tr>
+
+<?php endif; ?>
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
 
 <script>
-$(document).ready(function() {
-    $('#resellersTable').DataTable({
-        "scrollX": true
-    });
+
+$(document).on("click", ".clickable-row", function(){
+
+const url = $(this).data("href");
+
+if (url) {
+    window.location.href = url;
+}
+
 });
+
 </script>
+
+</body>
+</html>

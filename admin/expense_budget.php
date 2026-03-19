@@ -46,82 +46,59 @@ while ($row = $budgetResult->fetch_assoc()) {
 $budgetStmt->close();
 ?>
 
+<link rel="stylesheet" href="css/layout.css">
+
 <div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="dashboard.php" class="tip-bottom">
-                <i class="icon-home"></i> Dashboard
-            </a>
-            <a href="#" class="current">Expense vs Budget</a>
-        </div>
-    </div>
-
     <div class="container-fluid">
-
-        <!-- Filter -->
-        <div class="row-fluid">
-            <div class="span12">
-                <div class="widget-box">
-                    <div class="widget-title">
-                        <span class="icon"><i class="icon-filter"></i></span>
-                        <h5>Select Year</h5>
-                    </div>
-
-                    <div class="widget-content" style="padding:15px;">
-
-                        <form method="get" class="form-inline">
-
-                            <label style="margin-right:10px;"><strong>Year:</strong></label>
-
-                            <select name="year" style="margin-right:10px;">
-                                <?php
-                                $currentYear = date("Y");
-                                for ($y = $currentYear; $y >= $currentYear - 10; $y--) {
-                                    $selected = ($y == $selectedYear) ? "selected" : "";
-                                    echo "<option value='$y' $selected>$y</option>";
-                                }
-                                ?>
-                            </select>
-
-                            <button type="submit" class="btn btn-primary">
-                                Generate Report
-                            </button>
-
-                        </form>
-
-                    </div>
+        
+        <!-- Filter Section -->
+        <div class="filter-section" style="margin-bottom: 30px;">
+            <h4>
+                <i class="icon-filter"></i>
+                Filter by Year
+            </h4>
+            <form method="get" id="filterForm">
+                <div class="period-row">
+                    <select name="year">
+                        <?php
+                        $currentYear = date("Y");
+                        for ($y=$currentYear; $y>=$currentYear-10; $y--) {
+                            $selected = ($y==$selectedYear) ? "selected":"";
+                            echo "<option value='$y' $selected>$y</option>";
+                        }
+                        ?>
+                    </select>
                 </div>
-            </div>
+                <div class="filter-actions">
+                    <button type="submit" class="btn btn-primary">
+                        Apply Filter
+                    </button>
+                </div>
+            </form>
         </div>
 
-        <!-- Chart -->
-        <div class="row-fluid">
-            <div class="span12">
-                <div class="widget-box">
-
-                    <div class="widget-title">
-                        <span class="icon"><i class="icon-bar-chart"></i></span>
-                        <h5>Expense vs Budget Summary (<?= htmlspecialchars($selectedYear) ?>)</h5>
-                    </div>
-
-                    <div class="widget-content" style="padding:20px;">
-                        <canvas id="expenseBudgetChart" height="120"></canvas>
-                    </div>
-
-                </div>
+        <!-- Chart Container - White Form Style -->
+        <div class="chart-container-white">
+            <div class="chart-header">
+                <h3>Expense vs Budget Summary (<?= htmlspecialchars($selectedYear) ?>)</h3>
+            </div>
+            
+            <div class="chart-responsive">
+                <canvas id="expenseBudgetChart"></canvas>
             </div>
         </div>
-
     </div>
 </div>
+
+<?php include "footer.php"; ?>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
 const months = [
-"Jan","Feb","Mar","Apr","May","Jun",
-"Jul","Aug","Sep","Oct","Nov","Dec"
+    "Jan","Feb","Mar","Apr","May","Jun",
+    "Jul","Aug","Sep","Oct","Nov","Dec"
 ];
 
 const expenses = <?= json_encode(array_values($expenseData)) ?>;
@@ -150,9 +127,18 @@ const expenseChart = new Chart(ctx, {
     },
     options: {
         responsive: true,
+        maintainAspectRatio: false,
         scales: {
             y: {
-                beginAtZero: true
+                beginAtZero: true,
+                grid: {
+                    color: 'rgba(0,0,0,0.05)'
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                }
             }
         },
         plugins: {
@@ -160,28 +146,100 @@ const expenseChart = new Chart(ctx, {
                 position: "top"
             }
         },
-
-        // 👇 Change cursor when hovering bars
         onHover: function(event, elements) {
             event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
         },
-
-        // 👇 Redirect when clicking bar
         onClick: function(evt, elements) {
-
             if (elements.length > 0) {
-
                 const index = elements[0].index;
                 const month = index + 1;
-
-                window.location.href =
-                    "expenses.php?month=" + month + "&year=" + selectedYear;
-
+                window.location.href = "expenses.php?month=" + month + "&year=" + selectedYear;
             }
-
         }
     }
 });
 </script>
 
-<?php include "footer.php"; ?>
+<style>
+/* White Form Container for Chart */
+.chart-container-white {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+
+.chart-header {
+    padding: 25px 25px 0 25px;
+    border-bottom: 1px solid #e9ecef;
+    margin-bottom: 25px;
+}
+
+.chart-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.chart-responsive {
+    position: relative;
+    height: 500px;
+    padding: 0 25px 25px 25px;
+}
+
+.chart-responsive canvas {
+    max-height: 100%;
+}
+
+/* Filter Section Styling */
+.filter-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.filter-section h4 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-weight: 600;
+}
+
+.period-row {
+    margin-bottom: 20px;
+}
+
+.period-row select {
+    width: 150px;
+    padding: 10px 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.filter-actions {
+    text-align: right;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .chart-responsive {
+        height: 400px;
+    }
+    
+    .chart-header h3 {
+        font-size: 20px;
+    }
+    
+    .filter-section {
+        padding: 20px;
+    }
+}
+</style>
+
+<?php ob_end_flush(); ?>

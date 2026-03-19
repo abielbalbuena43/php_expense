@@ -27,7 +27,6 @@ if (isset($_POST['update_user'])) {
     $role = mysqli_real_escape_string($conn, $_POST['role']);
     $password = !empty($_POST['password']) ? mysqli_real_escape_string($conn, $_POST['password']) : null;
 
-
     // Build query dynamically depending on password change
     if ($password) {
         $query = "
@@ -49,7 +48,7 @@ if (isset($_POST['update_user'])) {
     }
 
     if (mysqli_query($conn, $query)) {
-        $_SESSION['alert'] = "success_update";
+        $_SESSION['alert'] = "User updated successfully!";
         header("Location: users.php");
         exit();
     } else {
@@ -61,16 +60,11 @@ $alert = $_SESSION['alert'] ?? null;
 unset($_SESSION['alert']);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="users.php" class="tip-bottom"><i class="icon-home"></i> Users</a>
-            <a href="#" class="current">Edit User</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
-        <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
+        <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
 
                 <?php if ($alert == "success_update") { ?>
@@ -79,9 +73,8 @@ unset($_SESSION['alert']);
                     <div class="alert alert-danger">Error: Unable to update user.</div>
                 <?php } ?>
 
-                <div class="widget-box" style="max-width: 700px; margin: 0 auto;">
+                <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-edit"></i></span>
                         <h5>Edit User Information</h5>
                     </div>
 

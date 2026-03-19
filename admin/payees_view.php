@@ -37,22 +37,15 @@ if (!$result || mysqli_num_rows($result) == 0) {
 $payee = mysqli_fetch_assoc($result);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="payees.php" class="tip-bottom"><i class="icon-home"></i> Payees</a>
-            <a href="#" class="current">View Payee</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
         <div class="row-fluid" style="background-color: white; min-height: 500px; padding: 20px;">
             <div class="span12">
-
                 <!-- View Payee -->
                 <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-align-justify"></i></span>
                         <h5>Payee Information</h5>
                     </div>
 
@@ -118,6 +111,7 @@ $payee = mysqli_fetch_assoc($result);
                             <!-- Action Buttons -->
                             <div class="form-actions" style="padding-left: 180px;">
                                 <a href="payees_edit.php?id=<?= $payee['payee_id'] ?>" class="btn btn-primary">Edit Payee</a>
+                                <a href="payees_delete.php?id=<?= $payee['payee_id'] ?>" class="btn btn-danger">Delete Payee</a>
                                 <a href="payees.php" class="btn btn-secondary">Back</a>
                             </div>
 

@@ -4,19 +4,41 @@ include "connection.php";
 include "header.php";
 
 /* -------------------------------
+   ALERT HELPER
+--------------------------------*/
+function setAlert($type, $message) {
+    $_SESSION['alert'] = [
+        'type' => $type,
+        'message' => $message
+    ];
+}
+
+/* -------------------------------
+   HANDLE SUCCESS REDIRECTS
+--------------------------------*/
+if (isset($_GET['success'])) {
+
+    if ($_GET['success'] === 'added') {
+        setAlert('success', 'Expense added successfully!');
+    }
+
+    if ($_GET['success'] === 'edited') {
+        setAlert('success', 'Expense updated successfully!');
+    }
+
+}
+
+/* -------------------------------
    PERIOD FILTER LOGIC
 --------------------------------*/
 $selectedPeriods = [];
 
 if (isset($_GET['month']) && isset($_GET['year'])) {
-
     $months = (array)$_GET['month'];
     $years = (array)$_GET['year'];
-
     $count = min(count($months), count($years));
 
     for ($i = 0; $i < $count; $i++) {
-
         $m = intval($months[$i]);
         $y = intval($years[$i]);
 
@@ -29,12 +51,14 @@ if (isset($_GET['month']) && isset($_GET['year'])) {
     }
 }
 
-
-
 /* -------------------------------
    HANDLE DELETE
 --------------------------------*/
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST' &&
+    isset($_POST['delete_id']) &&
+    $_POST['csrf_token'] === $_SESSION['csrf_token']
+) {
 
     $deleteId = intval($_POST['delete_id']);
 
@@ -43,27 +67,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id']) && $_POS
 
     if ($deleteStmt->execute()) {
 
-        $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+        $username = mysqli_real_escape_string($conn, $_SESSION['username'] ?? 'Unknown');
 
-        $logQuery = "
+        $logStmt = $conn->prepare("
             INSERT INTO logs (log_action, log_user, log_details, log_date)
-            VALUES ('Expense deleted', '$username', 'Expense ID: $deleteId', NOW())
-        ";
+            VALUES (?, ?, ?, NOW())
+        ");
 
-        mysqli_query($conn, $logQuery);
+        $logAction = "Expense deleted";
+        $logDetails = "Expense ID: $deleteId";
 
-        $_SESSION['alert'] = 'success';
+        $logStmt->bind_param("sss", $logAction, $username, $logDetails);
+        $logStmt->execute();
+        $logStmt->close();
+
+        setAlert('success', 'Expense deleted successfully!');
 
     } else {
-        $_SESSION['alert'] = 'error';
+
+        setAlert('error', 'Failed to delete expense.');
+
     }
 
     $deleteStmt->close();
 
-    header("Location: " . $_SERVER['PHP_SELF']);
+    header("Location: " . $_SERVER['PHP_SELF'] . (isset($_GET['month']) ? '?' . http_build_query($_GET) : ''));
     exit();
 }
-
 
 /* -------------------------------
    CSRF TOKEN
@@ -71,7 +101,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id']) && $_POS
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
-
 
 /* -------------------------------
    SQL QUERY
@@ -99,12 +128,9 @@ if (!empty($selectedPeriods)) {
     $conditions = [];
 
     foreach ($selectedPeriods as $p) {
-
         $conditions[] = "(MONTH(e.expense_date) = ? AND YEAR(e.expense_date) = ?)";
-
         $params[] = $p['month'];
         $params[] = $p['year'];
-
         $types .= "ii";
     }
 
@@ -122,226 +148,329 @@ if (!empty($params)) {
 $stmt->execute();
 $result = $stmt->get_result();
 $stmt->close();
+
+/* -------------------------------
+   PERIOD LABEL
+--------------------------------*/
+$periodLabel = !empty($selectedPeriods)
+    ? implode(', ', array_map(function($p) {
+        return date('F Y', mktime(0, 0, 0, $p['month'], 1, $p['year']));
+    }, $selectedPeriods))
+    : 'All Time';
 ?>
 
+<!DOCTYPE html>
+<html lang="en">
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="dashboard.php" class="tip-bottom"><i class="icon-home"></i> Home</a>
-            <a href="#" class="current">Expenses</a>
-        </div>
-    </div>
+<head>
 
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <div class="container-fluid">
+<link rel="stylesheet" href="css/bootstrap.min.css" />
+<link rel="stylesheet" href="css/layout.css" />
 
-        <div class="row-fluid">
-            <div class="span12">
-
-                <a href="expense_new.php" class="btn btn-success" style="margin-bottom:15px;">
-                    <i class="icon-plus"></i> Create New Expense
-                </a>
-
-                <div class="filter-section" style="display:inline-block;margin-left:20px;vertical-align:middle;">
-
-                    <form method="get" id="filterForm">
-
-                        <label style="font-weight:bold;">Filter by Specific Periods:</label>
-
-                        <div id="periodContainer">
-
-                            <?php
-                            $months = [
-                                1=>"January",2=>"February",3=>"March",4=>"April",
-                                5=>"May",6=>"June",7=>"July",8=>"August",
-                                9=>"September",10=>"October",11=>"November",12=>"December"
-                            ];
-
-                            foreach($selectedPeriods as $p){
-                            ?>
-
-                            <div class="period-row" style="margin-bottom:5px;">
-
-                                <select name="month[]" style="width:150px;padding:5px;">
-                                    <?php
-                                    foreach($months as $num=>$name){
-                                        $sel = ($p['month']==$num) ? "selected":"";
-                                        echo "<option value='$num' $sel>$name</option>";
-                                    }
-                                    ?>
-                                </select>
-
-                                <select name="year[]" style="width:100px;padding:5px;">
-                                    <?php
-                                    $currentYear=date('Y');
-                                    for($y=$currentYear;$y>=$currentYear-10;$y--){
-                                        $sel=($p['year']==$y)?"selected":"";
-                                        echo "<option value='$y' $sel>$y</option>";
-                                    }
-                                    ?>
-                                </select>
-
-                                <button type="button" onclick="removePeriod(this)" class="btn btn-danger btn-mini">X</button>
-
-                            </div>
-
-                            <?php } ?>
-
-                        </div>
-
-                        <button type="button" id="addPeriod" class="btn btn-info btn-primary">+ Add Period</button>
-                        <button type="submit" class="btn btn-primary">Apply Filter</button>
-                        <button type="button" id="clearFilter" class="btn btn-secondary">Clear Filter</button>
-
-                    </form>
-
-                </div>
-            </div>
-        </div>
-
-
-        <div class="row-fluid">
-            <div class="span12">
-
-                <div class="widget-box">
-                    <div class="widget-content nopadding">
-
-                        <table class="table table-bordered table-striped" id="expensesTable">
-
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>OR Number</th>
-                                    <th>Date</th>
-                                    <th>Company</th>
-                                    <th>Payee</th>
-                                    <th>Category</th>
-                                    <th>Amount</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-
-                                <?php if ($result && $result->num_rows > 0): ?>
-
-                                    <?php while ($row = $result->fetch_assoc()): ?>
-
-                                        <tr>
-                                            <td><?php echo $row['expense_id']; ?></td>
-
-                                            <td><?php echo htmlspecialchars($row['expense_or_number']); ?></td>
-
-                                            <td><?php echo date('M d, Y', strtotime($row['expense_date'])); ?></td>
-
-                                            <td><?php echo htmlspecialchars($row['company_name']); ?></td>
-
-                                            <td><?php echo htmlspecialchars($row['payee_name']); ?></td>
-
-                                            <td><?php echo htmlspecialchars($row['category_name']); ?></td>
-
-                                            <td>₱<?php echo number_format($row['expense_total_receipt_amount'],2); ?></td>
-
-                                            <td style="white-space:nowrap;">
-
-                                                <a href="expense_view.php?id=<?php echo $row['expense_id']; ?>" class="btn btn-info btn-mini">View</a>
-
-                                                <form method="post" style="display:inline;" onsubmit="return confirm('Delete this expense?');">
-
-                                                    <input type="hidden" name="delete_id" value="<?php echo $row['expense_id']; ?>">
-
-                                                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-
-                                                    <button type="submit" class="btn btn-danger btn-mini">Delete</button>
-
-                                                </form>
-
-                                            </td>
-                                        </tr>
-
-                                    <?php endwhile; ?>
-
-                                <?php else: ?>
-
-                                    <tr>
-                                        <td colspan="8" style="text-align:center;padding:20px;">
-                                            No expenses found for the selected period.
-                                        </td>
-                                    </tr>
-
-                                <?php endif; ?>
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-    </div>
-</div>
-
-<?php include "footer.php"; ?>
-
+<link href="font-awesome/css/font-awesome.css" rel="stylesheet" />
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+<title>Expenses List</title>
+
+</head>
+
+<body>
+
+<div id="content">
+
+<?php if (isset($_SESSION['alert'])): ?>
+
+<?php
+$alert = $_SESSION['alert'];
+
+if (is_array($alert)) {
+    $type = $alert['type'] ?? 'info';
+    $message = $alert['message'] ?? 'Something happened.';
+} else {
+    // fallback for old string alerts
+    $type = 'success';
+    $message = $alert;
+}
+
+unset($_SESSION['alert']);
+?>
+
+<div class="alert alert-<?= $type ?>">
+    <?= htmlspecialchars($message) ?>
+</div>
+
+<?php endif; ?>
+
+
+<div class="container-fluid">
+
+<!-- Header Actions -->
+
+<div class="header-actions">
+    <a href="expense_new.php" class="btn btn-success">
+        <i class="icon-plus"></i>
+        Create New Expense
+    </a>
+</div>
+
+
+<!-- Filter Section -->
+
+<div class="filter-section">
+
+<h4>
+    <i class="icon-filter"></i>
+    Filter by Periods (<?= htmlspecialchars($periodLabel) ?>)
+</h4>
+
+<form method="get" id="filterForm">
+
+<div id="periodContainer">
+
+<?php if (!empty($selectedPeriods)): ?>
+<?php foreach ($selectedPeriods as $p): ?>
+
+<div class="period-row">
+
+<select name="month[]">
+
+<?php
+$months = [
+    1=>"January",2=>"February",3=>"March",4=>"April",
+    5=>"May",6=>"June",7=>"July",8=>"August",
+    9=>"September",10=>"October",11=>"November",12=>"December"
+];
+
+foreach ($months as $num=>$name):
+$sel = ($p['month']==$num) ? "selected" : "";
+?>
+
+<option value="<?= $num ?>" <?= $sel ?>>
+<?= $name ?>
+</option>
+
+<?php endforeach; ?>
+
+</select>
+
+
+<select name="year[]">
+
+<?php
+$currentYear = date('Y');
+
+for ($y=$currentYear;$y>=$currentYear-10;$y--):
+$sel = ($p['year']==$y) ? "selected" : "";
+?>
+
+<option value="<?= $y ?>" <?= $sel ?>>
+<?= $y ?>
+</option>
+
+<?php endfor; ?>
+
+</select>
+
+<button
+type="button"
+onclick="removePeriod(this)"
+class="btn btn-danger-small"
+>
+<i class="icon-remove"></i>
+</button>
+
+</div>
+
+<?php endforeach; ?>
+<?php endif; ?>
+
+</div>
+
+
+<div class="filter-actions">
+
+<button type="button" id="addPeriod" class="btn btn-primary">
+<i class="icon-plus"></i>
+Add Period
+</button>
+
+<button type="submit" class="btn btn-primary">
+Apply Filter
+</button>
+
+<button type="button" id="clearFilter" class="btn btn-secondary">
+Clear Filter
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+
+<!-- Main Table -->
+
+<div class="table-container">
+
+<div class="table-header">
+
+<h3>
+Expenses List (<?= htmlspecialchars($periodLabel) ?>)
+</h3>
+
+<span class="table-stats">
+Showing <?= $result->num_rows ?? 0 ?> records
+</span>
+
+</div>
+
+
+<div class="table-responsive">
+
+<table>
+
+<thead>
+<tr>
+<th>OR Number</th>
+<th>Date</th>
+<th>Company</th>
+<th>Payee</th>
+<th>Category</th>
+<th>Amount</th>
+</tr>
+</thead>
+
+
+<tbody>
+
+<?php if ($result && $result->num_rows > 0): ?>
+
+<?php while ($row = $result->fetch_assoc()): ?>
+
+<tr
+class="clickable-row"
+data-href="expense_view.php?id=<?= $row['expense_id'] ?>"
+>
+
+<td><?= htmlspecialchars($row['expense_or_number']) ?></td>
+<td><?= date('M d, Y', strtotime($row['expense_date'])) ?></td>
+<td><?= htmlspecialchars($row['company_name']) ?></td>
+<td><?= htmlspecialchars($row['payee_name']) ?></td>
+<td><?= htmlspecialchars($row['category_name']) ?></td>
+
+<td class="amount-col">
+₱<?= number_format($row['expense_total_receipt_amount'], 2) ?>
+</td>
+
+</tr>
+
+<?php endwhile; ?>
+
+<?php else: ?>
+
+<tr>
+<td colspan="8">
+
+<div class="empty-state">
+
+<i class="icon-inbox"></i>
+
+<h4>No expenses found</h4>
+
+<p>
+No expenses match your current filter.
+Try adjusting the date range or create a new expense.
+</p>
+
+</div>
+
+</td>
+</tr>
+
+<?php endif; ?>
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
 <script>
 
-    $(document).ready(function(){
+$(document).on("click", ".clickable-row", function() {
 
-        $("#addPeriod").click(function(){
+const url = $(this).data("href");
 
-            var currentYear=new Date().getFullYear();
+if (url) {
+    window.location.href = url;
+}
 
-            var html=`
-            <div class="period-row" style="margin-bottom:5px;">
+});
 
-                <select name="month[]" style="width:150px;padding:5px;">
-                    <option value="1">January</option>
-                    <option value="2">February</option>
-                    <option value="3">March</option>
-                    <option value="4">April</option>
-                    <option value="5">May</option>
-                    <option value="6">June</option>
-                    <option value="7">July</option>
-                    <option value="8">August</option>
-                    <option value="9">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
-                </select>
+$(document).ready(function(){
 
-                <select name="year[]" style="width:100px;padding:5px;">`;
+    $("#addPeriod").click(function(){
 
-            for(var y=currentYear;y>=currentYear-10;y--){
-                html+=`<option value="${y}">${y}</option>`;
-            }
+        const currentYear = new Date().getFullYear();
 
-            html+=`</select>
+        let html = `
+        <div class="period-row">
 
-                <button type="button" onclick="removePeriod(this)" class="btn btn-danger btn-mini">X</button>
+            <select name="month[]">
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
 
-            </div>`;
+            <select name="year[]">`;
 
-            $("#periodContainer").append(html);
+        for(let y = currentYear; y >= currentYear - 10; y--){
+            html += `<option value="${y}">${y}</option>`;
+        }
 
-        });
+        html += `</select>
 
+            <button type="button" onclick="removePeriod(this)" class="btn btn-danger-small">
+                <i class="icon-remove"></i>
+            </button>
 
-        $("#clearFilter").click(function(){
-            window.location.href=window.location.pathname;
-        });
+        </div>`;
 
+        $("#periodContainer").append(html);
     });
 
+    $("#clearFilter").click(function(){
+        window.location.href = window.location.pathname;
+    });
 
-    function removePeriod(btn){
-        $(btn).closest('.period-row').remove();
-    }
+});
+
+function removePeriod(btn){
+    $(btn).closest('.period-row').remove();
+}
 
 </script>
+
+</body>
+</html>

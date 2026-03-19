@@ -1,7 +1,7 @@
 <?php
 ob_start();
 session_start();
-include "header.php";
+include "header.php"; 
 include "connection.php";
 
 // Validate ID
@@ -34,7 +34,7 @@ if (isset($_POST['update_product'])) {
         ";
 
         if (mysqli_query($conn, $update_query)) {
-            $_SESSION['alert'] = "success_update";
+            $_SESSION['alert'] = "Product updated successfully!";
             header("Location: products.php");
             exit();
         } else {
@@ -49,20 +49,15 @@ $alert = $_SESSION['alert'] ?? null;
 unset($_SESSION['alert']);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="products.php" class="tip-bottom"><i class="icon-home"></i> Products</a>
-            <a href="#" class="current">Edit Product</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
-        <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
+        <div class="row-fluid" style="background-color: white; min-height: 500px; padding: 20px;">
             <div class="span12">
 
                 <!-- Alert Messages -->
-                <?php if ($alert == "success_update") { ?>
+                <?php if ($alert == "Product updated successfully!") { ?>
                     <div class="alert alert-success">Product updated successfully!</div>
                 <?php } elseif ($alert == "error_update") { ?>
                     <div class="alert alert-danger">Error: Unable to update product.</div>
@@ -72,9 +67,8 @@ unset($_SESSION['alert']);
                     <div class="alert alert-warning">Product not found.</div>
                 <?php } ?>
 
-                <div class="widget-box" style="max-width: 600px; margin: 0 auto;">
+                <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-edit"></i></span>
                         <h5>Edit Product</h5>
                     </div>
 
@@ -85,15 +79,14 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Product Name:</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" name="product_name" 
+                                    <input type="text" name="product_name" class="span11" 
                                            value="<?= htmlspecialchars($product['product_name']) ?>" required>
                                 </div>
                             </div>
 
+                            <!-- Action Buttons -->
                             <div class="form-actions" style="padding-left: 180px;">
-                                <button type="submit" name="update_product" class="btn btn-success">
-                                    <i class="icon-save"></i> Update Product
-                                </button>
+                                <button type="submit" name="update_product" class="btn btn-success">Update Product</button>
                                 <a href="products.php" class="btn btn-secondary">Cancel</a>
                             </div>
 

@@ -43,7 +43,7 @@ if (isset($_POST['confirm_delete'])) {
     $delete_query = "DELETE FROM payees WHERE payee_id = $payee_id";
 
     if (mysqli_query($conn, $delete_query)) {
-        $_SESSION['alert'] = "deleted";
+        $_SESSION['alert'] = "Payee deleted successfully!";
         header("Location: payees.php");
         exit();
     } else {
@@ -60,14 +60,9 @@ if (isset($_SESSION['alert'])) {
 }
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="payees.php" class="tip-bottom"><i class="icon-home"></i> Payees</a>
-            <a href="#" class="current">Delete Payee</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
         <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
             <div class="span12">
@@ -84,7 +79,6 @@ if (isset($_SESSION['alert'])) {
                 <!-- Delete Confirmation -->
                 <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-trash"></i></span>
                         <h5>Delete Payee Confirmation</h5>
                     </div>
 

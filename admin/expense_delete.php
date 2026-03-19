@@ -61,7 +61,7 @@ if (isset($_POST['confirm_delete'])) {
         $logQuery = "INSERT INTO logs (log_action, log_user, log_details, log_date) VALUES ('Expense deleted', '" . mysqli_real_escape_string($conn, $_SESSION['username']) . "', 'Expense ID: $expense_id', NOW())";
         mysqli_query($conn, $logQuery);
         
-        $_SESSION['alert'] = "deleted";
+        $_SESSION['alert'] = "Expense deleted successfully!";
         header("Location: expenses.php");
         exit();
     } else {
@@ -74,19 +74,14 @@ $alert = $_SESSION['alert'] ?? null;
 unset($_SESSION['alert']);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="expenses.php" class="tip-bottom"><i class="icon-home"></i> Expenses</a>
-            <a href="#" class="current">Delete Expense</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css" />
 
+<div id="content">
     <div class="container-fluid">
         <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
 
-                <?php if ($alert == "deleted") { ?>
+                <?php if ($alert == "Expense deleted successfully!") { ?>
                     <div class="alert alert-success">Expense deleted successfully!</div>
                 <?php } elseif ($alert == "error") { ?>
                     <div class="alert alert-danger">Error: Unable to delete expense.</div>

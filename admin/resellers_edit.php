@@ -1,7 +1,7 @@
 <?php
 ob_start();
 session_start();
-include "header.php";
+include "header.php"; 
 include "connection.php";
 
 // Validate ID
@@ -34,7 +34,7 @@ if (isset($_POST['update_reseller'])) {
         ";
 
         if (mysqli_query($conn, $update_query)) {
-            $_SESSION['alert'] = "success_update";
+            $_SESSION['alert'] = "Reseller updated successfully!";
             header("Location: resellers.php");
             exit();
         } else {
@@ -49,20 +49,15 @@ $alert = $_SESSION['alert'] ?? null;
 unset($_SESSION['alert']);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="resellers.php" class="tip-bottom"><i class="icon-home"></i> Resellers</a>
-            <a href="#" class="current">Edit Reseller</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
-        <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
+        <div class="row-fluid" style="background-color: white; min-height: 500px; padding: 20px;">
             <div class="span12">
 
                 <!-- Alert Messages -->
-                <?php if ($alert == "success_update") { ?>
+                <?php if ($alert == "Reseller updated successfully!") { ?>
                     <div class="alert alert-success">Reseller updated successfully!</div>
                 <?php } elseif ($alert == "error_update") { ?>
                     <div class="alert alert-danger">Error: Unable to update reseller.</div>
@@ -72,9 +67,8 @@ unset($_SESSION['alert']);
                     <div class="alert alert-warning">Reseller not found.</div>
                 <?php } ?>
 
-                <div class="widget-box" style="max-width: 600px; margin: 0 auto;">
+                <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-edit"></i></span>
                         <h5>Edit Reseller</h5>
                     </div>
 
@@ -85,15 +79,14 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Reseller Name:</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" name="reseller_name" 
+                                    <input type="text" name="reseller_name" class="span11" 
                                            value="<?= htmlspecialchars($reseller['reseller_name']) ?>" required>
                                 </div>
                             </div>
 
+                            <!-- Action Buttons -->
                             <div class="form-actions" style="padding-left: 180px;">
-                                <button type="submit" name="update_reseller" class="btn btn-success">
-                                    <i class="icon-save"></i> Update Reseller
-                                </button>
+                                <button type="submit" name="update_reseller" class="btn btn-success">Update Reseller</button>
                                 <a href="resellers.php" class="btn btn-secondary">Cancel</a>
                             </div>
 

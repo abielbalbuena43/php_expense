@@ -1,8 +1,40 @@
 <?php
+session_start();
 include "connection.php";
 include "header.php";
 
-// Fetch all end users and count how many expenses are linked to each
+/* -------------------------------
+   ALERT HELPER
+--------------------------------*/
+function setAlert($type, $message) {
+    $_SESSION['alert'] = [
+        'type' => $type,
+        'message' => $message
+    ];
+}
+
+/* -------------------------------
+   HANDLE SUCCESS REDIRECTS
+--------------------------------*/
+if (isset($_GET['success'])) {
+
+    if ($_GET['success'] === 'added') {
+        setAlert('success', 'End User added successfully!');
+    }
+
+    if ($_GET['success'] === 'edited') {
+        setAlert('success', 'End User updated successfully!');
+    }
+
+    if ($_GET['success'] === 'deleted') {
+        setAlert('success', 'End User deleted successfully!');
+    }
+
+}
+
+/* -------------------------------
+   FETCH END USERS
+--------------------------------*/
 $sql = "
     SELECT 
         eu.end_user_id,
@@ -14,78 +46,175 @@ $sql = "
     GROUP BY eu.end_user_id
     ORDER BY eu.end_user_name ASC
 ";
+
 $result = $conn->query($sql);
 ?>
 
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Core CSS -->
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<link rel="stylesheet" href="css/layout.css">
+
+<!-- Icons -->
+<link href="font-awesome/css/font-awesome.css" rel="stylesheet">
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<title>End Users List</title>
+
+</head>
+
+<body>
+
 <div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="dashboard.php" class="tip-bottom"><i class="icon-home"></i> Home</a>
-            <a href="end_users.php" class="current">End Users</a>
-        </div>
-    </div>
 
-    <div class="container-fluid">
+<?php if (isset($_SESSION['alert'])): ?>
 
-        <!-- Action Button -->
-        <div class="row-fluid">
-            <div class="span12">
-                <a href="end_users_new.php" class="btn btn-success" style="margin-bottom:15px;">
-                    <i class="icon-plus"></i> Add New End User
-                </a>
-            </div>
-        </div>
+<?php
+$alert = $_SESSION['alert'];
 
-        <!-- End Users Table -->
-        <div class="row-fluid">
-            <div class="span12">
-                <div class="widget-box">
-                    <div class="widget-content nopadding">
-                        <table class="table table-bordered table-striped" id="endUsersTable">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>End User Name</th>
-                                    <th>Total Linked Expenses</th>
-                                    <th>Date Created</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if ($result && $result->num_rows > 0): ?>
-                                    <?php while ($row = $result->fetch_assoc()): ?>
-                                        <tr>
-                                            <td><?php echo $row['end_user_id']; ?></td>
-                                            <td><?php echo htmlspecialchars($row['end_user_name']); ?></td>
-                                            <td><?php echo $row['total_expenses']; ?></td>
-                                            <td><?php echo date('M d, Y', strtotime($row['created_at'])); ?></td>
-                                            <td style="white-space: nowrap;">
-                                                <a href="end_users_view.php?id=<?php echo $row['end_user_id']; ?>" class="btn btn-primary btn-mini">View</a>
-                                                <a href="end_users_delete.php?id=<?php echo $row['end_user_id']; ?>" class="btn btn-danger btn-mini" onclick="return confirm('Are you sure you want to delete this end user?');">Delete</a>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="5" style="text-align:center;">No end users found.</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+if (is_array($alert)) {
+    $type = $alert['type'] ?? 'info';
+    $message = $alert['message'] ?? 'Something happened.';
+} else {
+    // fallback for old string alerts
+    $type = 'success';
+    $message = $alert;
+}
 
-    </div>
+unset($_SESSION['alert']);
+?>
+
+<div class="alert alert-<?= $type ?>">
+    <?= htmlspecialchars($message) ?>
 </div>
 
-<?php include "footer.php"; ?>
+<?php endif; ?>
+
+<div class="container-fluid">
+
+<!-- Header Actions -->
+
+<div class="header-actions">
+
+<a href="end_users_new.php" class="btn btn-success" >
+<i class="icon-plus"></i>
+Create New End User
+</a>
+
+</div>
+
+
+<!-- Main Table -->
+
+<div class="table-container">
+
+<div class="table-header">
+
+<h3>
+End Users List
+</h3>
+
+<span class="table-stats">
+Showing <?= $result->num_rows ?? 0 ?> records
+</span>
+
+</div>
+
+
+<div class="table-responsive">
+
+<table>
+
+<thead>
+
+<tr>
+    <th>ID</th>
+    <th>End User Name</th>
+    <th>Total Linked Expenses</th>
+    <th>Date Created</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<?php if ($result && $result->num_rows > 0): ?>
+
+<?php while ($row = $result->fetch_assoc()): ?>
+
+<tr
+class="clickable-row"
+data-href="end_users_view.php?id=<?= $row['end_user_id'] ?>"
+>
+
+<td><?= htmlspecialchars($row['end_user_id']) ?></td>
+<td><?= htmlspecialchars($row['end_user_name']) ?></td>
+<td><?= htmlspecialchars($row['total_expenses']) ?></td>
+<td><?= date('M d, Y', strtotime($row['created_at'])) ?></td>
+
+</tr>
+
+<?php endwhile; ?>
+
+<?php else: ?>
+
+<tr>
+
+<td colspan="4">
+
+<div class="empty-state">
+
+<i class="icon-inbox"></i>
+
+<h4>No end users found</h4>
+
+<p>
+No end users available.
+Create a new end user to get started.
+</p>
+
+</div>
+
+</td>
+
+</tr>
+
+<?php endif; ?>
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
 
 <script>
-$(document).ready(function() {
-    $('#endUsersTable').DataTable({
-        "scrollX": true
-    });
+
+$(document).on("click", ".clickable-row", function(){
+
+const url = $(this).data("href");
+
+if (url) {
+    window.location.href = url;
+}
+
 });
+
 </script>
+
+</body>
+</html>

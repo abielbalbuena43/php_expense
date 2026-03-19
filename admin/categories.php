@@ -1,86 +1,144 @@
 <?php
+session_start();
 include "connection.php";
 include "header.php";
 
-// Fetch all categories
+/* -------------------------------
+   FETCH CATEGORIES
+--------------------------------*/
 $sql = "
-    SELECT 
-        category_id,
-        category_name,
-        category_created_at
-    FROM expense_categories
-    ORDER BY category_created_at DESC
+SELECT 
+    category_id,
+    category_name,
+    category_created_at
+FROM expense_categories
+ORDER BY category_created_at DESC
+LIMIT 100
 ";
+
 $result = $conn->query($sql);
 ?>
 
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Core CSS -->
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<link rel="stylesheet" href="css/layout.css">
+
+<!-- Icons -->
+<link href="font-awesome/css/font-awesome.css" rel="stylesheet">
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<title>Categories List</title>
+
+</head>
+
+<body>
+
 <div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="dashboard.php" class="tip-bottom"><i class="icon-home"></i> Home</a>
-            <a href="categories.php" class="current">Expense Categories</a>
-        </div>
+
+    <?php if (isset($_SESSION['alert'])): ?>
+
+    <?php
+    $alert = $_SESSION['alert'];
+
+    if (is_array($alert)) {
+        $type = $alert['type'] ?? 'info';
+        $message = $alert['message'] ?? 'Something happened.';
+    } else {
+        // fallback for old string alerts
+        $type = 'success';
+        $message = $alert;
+    }
+
+    unset($_SESSION['alert']);
+    ?>
+
+    <div class="alert alert-<?= $type ?>">
+        <?= htmlspecialchars($message) ?>
     </div>
 
-    <div class="container-fluid">
+    <?php endif; ?>
 
-        <!-- Action Button -->
-        <div class="row-fluid">
-            <div class="span12">
-                <a href="categories_new.php" class="btn btn-success" style="margin-bottom:15px;">
-                    <i class="icon-plus"></i> Add New Category
-                </a>
-            </div>
-        </div>
+<div class="container-fluid">
 
-        <!-- Categories Table -->
-        <div class="row-fluid">
-            <div class="span12">
-                <div class="widget-box">
-                    <div class="widget-content nopadding">
-                        <table class="table table-bordered table-striped" id="categoriesTable">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Category Name</th>
-                                    <th>Created At</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if ($result && $result->num_rows > 0): ?>
-                                    <?php while ($row = $result->fetch_assoc()): ?>
-                                        <tr>
-                                            <td><?php echo $row['category_id']; ?></td>
-                                            <td><?php echo htmlspecialchars($row['category_name']); ?></td>
-                                            <td><?php echo date('M d, Y', strtotime($row['category_created_at'])); ?></td>
-                                            <td style="white-space: nowrap;">
-                                                <a href="categories_view.php?id=<?php echo $row['category_id']; ?>" class="btn btn-info btn-mini">View</a>
-                                                <a href="categories_delete.php?id=<?php echo $row['category_id']; ?>" class="btn btn-danger btn-mini" onclick="return confirm('Are you sure you want to delete this category?');">Delete</a>
-                                            </td>
-                                        </tr>
-                                    <?php endwhile; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="4" style="text-align:center;">No categories found.</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+<!-- Header Actions -->
+<div class="header-actions">
+    <a href="categories_new.php" class="btn btn-success">
+        <i class="icon-plus"></i>
+        Create New Category
+    </a>
+</div>
 
+<!-- Main Table -->
+<div class="table-container">
+    <div class="table-header">
+        <h3>Expense Categories</h3>
+        <span class="table-stats">
+            Showing <?= $result->num_rows ?? 0 ?> records
+        </span>
+    </div>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Category Name</th>
+                    <th>Date Created</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+            <?php if ($result && $result->num_rows > 0): ?>
+                <?php while ($row = $result->fetch_assoc()): ?>
+                    <tr class="clickable-row" data-href="categories_view.php?id=<?= $row['category_id'] ?>">
+                        <td><?= htmlspecialchars($row['category_name']) ?></td>
+                        <td><?= date('M d, Y', strtotime($row['category_created_at'])) ?></td>
+                    </tr>
+                <?php endwhile; ?>
+
+            <?php else: ?>
+                <tr>
+                    <td colspan="2">
+                        <div class="empty-state">
+                            <i class="icon-inbox"></i>
+                            <h4>No categories found</h4>
+                            <p>No categories available. Create a new category to get started.</p>
+                        </div>
+                    </td>
+                </tr>
+            <?php endif; ?>
+
+            </tbody>
+        </table>
     </div>
 </div>
 
-<?php include "footer.php"; ?>
+</div>
+
+</div>
 
 <script>
-$(document).ready(function() {
-    $('#categoriesTable').DataTable({
-        "scrollX": true
-    });
+$(document).on("click", ".clickable-row", function(){
+    const url = $(this).data("href");
+    if (url) {
+        window.location.href = url;
+    }
+});
+
+// ✅ PREVENT ROW FROM OVERRIDING BUTTON
+$(document).on("click", ".header-actions a", function(e){
+    e.stopPropagation();
 });
 </script>
+
+</body>
+</html>

@@ -31,7 +31,7 @@ if (isset($_POST['confirm_delete'])) {
     $delete_query = "DELETE FROM users WHERE user_id = $user_id";
 
     if (mysqli_query($conn, $delete_query)) {
-        $_SESSION['alert'] = "deleted";
+        $_SESSION['alert'] = "User deleted successfully!";
         header("Location: users.php");
         exit();
     } else {
@@ -48,14 +48,9 @@ if (isset($_SESSION['alert'])) {
 }
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="users.php" class="tip-bottom"><i class="icon-home"></i> Users</a>
-            <a href="#" class="current">Delete User</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
         <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
             <div class="span12">

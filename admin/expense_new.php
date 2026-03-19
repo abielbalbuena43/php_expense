@@ -103,7 +103,7 @@ $total_receipt_amount = round($total_purchases + $service_charge + $exempt + $ze
         $logQuery = "INSERT INTO logs (log_action, log_user, log_details, log_date) VALUES ('Expense created', '" . mysqli_real_escape_string($conn, $_SESSION['username']) . "', 'Expense ID: $expense_id', NOW())";
         mysqli_query($conn, $logQuery);
         
-        $_SESSION['alert'] = "success";
+        $_SESSION['alert'] = "Expense added successfully!";
         header("Location: expenses.php");
         exit();
     } else {
@@ -116,19 +116,14 @@ $alert = $_SESSION['alert'] ?? null;
 unset($_SESSION['alert']);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="expenses.php" class="tip-bottom"><i class="icon-home"></i> Expenses</a>
-            <a href="#" class="current">Add New Expense</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
         <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
 
-                <?php if ($alert == "success") { ?>
+                <?php if ($alert == "Expense added successfully!") { ?>
                     <div class="alert alert-success">Expense added successfully!</div>
                 <?php } elseif ($alert == "error") { ?>
                     <div class="alert alert-danger">Error: Unable to save expense.</div>
@@ -136,7 +131,6 @@ unset($_SESSION['alert']);
 
                 <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-align-justify"></i></span>
                         <h5>Expense Information</h5>
                     </div>
 
@@ -408,6 +402,9 @@ document.getElementById('companySelect').addEventListener('change', function() {
     const tin = selectedOption.getAttribute('data-tin') || '';
     document.getElementById('companyTin').value = tin;
 });
+
+
+
 </script>
 
 <?php include "footer.php"; ?>

@@ -93,7 +93,7 @@ if (isset($_POST['update_expense'])) {
     $logQuery = "INSERT INTO logs (log_action, log_user, log_details, log_date) VALUES ('Expense updated', '" . mysqli_real_escape_string($conn, $_SESSION['username']) . "', 'Expense ID: $expense_id', NOW())";
     mysqli_query($conn, $logQuery);
     
-    $_SESSION['alert'] = "success_update";
+    $_SESSION['alert'] = "Expense updated successfully!";
     header("Location: expenses.php");
     exit();
 } else {
@@ -106,18 +106,11 @@ unset($_SESSION['alert']);
 ?>
 
 <div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="expenses.php" class="tip-bottom"><i class="icon-home"></i> Expenses</a>
-            <a href="#" class="current">Edit Expense</a>
-        </div>
-    </div>
-
     <div class="container-fluid">
         <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
 
-                <?php if ($alert == "success_update") { ?>
+                <?php if ($alert == "Expense updated successfully!") { ?>
                     <div class="alert alert-success">Expense updated successfully!</div>
                 <?php } elseif ($alert == "error_update") { ?>
                     <div class="alert alert-danger">Error: Unable to update expense.</div>
@@ -125,7 +118,6 @@ unset($_SESSION['alert']);
 
                 <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-edit"></i></span>
                         <h5>Edit Expense Information</h5>
                     </div>
 

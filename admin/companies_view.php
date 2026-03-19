@@ -1,10 +1,9 @@
 <?php
-ob_start();
 session_start();
-include "header.php"; 
+include "header.php";
 include "connection.php";
 
-// Validate company ID
+// Check if company ID is provided
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     echo "<div class='alert alert-danger'>Invalid Company ID.</div>";
     exit();
@@ -13,7 +12,12 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $company_id = intval($_GET['id']);
 
 // Fetch company details
-$query = "SELECT * FROM companies WHERE company_id = '$company_id' LIMIT 1";
+$query = "
+    SELECT * 
+    FROM companies
+    WHERE company_id = '$company_id'
+    LIMIT 1
+";
 $result = mysqli_query($conn, $query);
 
 if (!$result || mysqli_num_rows($result) == 0) {
@@ -24,28 +28,23 @@ if (!$result || mysqli_num_rows($result) == 0) {
 $company = mysqli_fetch_assoc($result);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="companies.php" class="tip-bottom"><i class="icon-home"></i> Companies</a>
-            <a href="#" class="current">View Company</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
         <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
 
-                <!-- View Company -->
+                <!-- Company Information -->
                 <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-align-justify"></i></span>
                         <h5>Company Information</h5>
                     </div>
 
                     <div class="widget-content" style="padding: 20px;">
                         <form class="form-horizontal">
 
+                            <!-- Company Name -->
                             <div class="control-group">
                                 <label class="control-label">Company Name:</label>
                                 <div class="controls">
@@ -53,13 +52,15 @@ $company = mysqli_fetch_assoc($result);
                                 </div>
                             </div>
 
+                            <!-- Company TIN -->
                             <div class="control-group">
                                 <label class="control-label">TIN:</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" value="<?= htmlspecialchars($company['tin']) ?>" disabled>
+                                    <input type="text" class="span11" value="<?= htmlspecialchars($company['company_tin']) ?>" disabled>
                                 </div>
                             </div>
 
+                            <!-- RDO Code -->
                             <div class="control-group">
                                 <label class="control-label">RDO Code:</label>
                                 <div class="controls">
@@ -67,6 +68,7 @@ $company = mysqli_fetch_assoc($result);
                                 </div>
                             </div>
 
+                            <!-- Branch Code -->
                             <div class="control-group">
                                 <label class="control-label">Branch Code:</label>
                                 <div class="controls">
@@ -74,6 +76,7 @@ $company = mysqli_fetch_assoc($result);
                                 </div>
                             </div>
 
+                            <!-- Trade Name -->
                             <div class="control-group">
                                 <label class="control-label">Trade Name:</label>
                                 <div class="controls">
@@ -81,41 +84,37 @@ $company = mysqli_fetch_assoc($result);
                                 </div>
                             </div>
 
+                            <!-- Address -->
                             <div class="control-group">
                                 <label class="control-label">Substreet:</label>
                                 <div class="controls">
                                     <input type="text" class="span11" value="<?= htmlspecialchars($company['substreet']) ?>" disabled>
                                 </div>
                             </div>
-
                             <div class="control-group">
                                 <label class="control-label">Street:</label>
                                 <div class="controls">
                                     <input type="text" class="span11" value="<?= htmlspecialchars($company['street']) ?>" disabled>
                                 </div>
                             </div>
-
                             <div class="control-group">
                                 <label class="control-label">Barangay:</label>
                                 <div class="controls">
                                     <input type="text" class="span11" value="<?= htmlspecialchars($company['barangay']) ?>" disabled>
                                 </div>
                             </div>
-
                             <div class="control-group">
                                 <label class="control-label">City:</label>
                                 <div class="controls">
                                     <input type="text" class="span11" value="<?= htmlspecialchars($company['city']) ?>" disabled>
                                 </div>
                             </div>
-
                             <div class="control-group">
                                 <label class="control-label">Province:</label>
                                 <div class="controls">
                                     <input type="text" class="span11" value="<?= htmlspecialchars($company['province']) ?>" disabled>
                                 </div>
                             </div>
-
                             <div class="control-group">
                                 <label class="control-label">Zip Code:</label>
                                 <div class="controls">
@@ -123,6 +122,7 @@ $company = mysqli_fetch_assoc($result);
                                 </div>
                             </div>
 
+                            <!-- Special Fields -->
                             <div class="control-group">
                                 <label class="control-label">Special Fields:</label>
                                 <div class="controls">
@@ -130,6 +130,7 @@ $company = mysqli_fetch_assoc($result);
                                 </div>
                             </div>
 
+                            <!-- Created At -->
                             <div class="control-group">
                                 <label class="control-label">Created At:</label>
                                 <div class="controls">
@@ -140,6 +141,7 @@ $company = mysqli_fetch_assoc($result);
                             <!-- Action Buttons -->
                             <div class="form-actions" style="padding-left: 180px;">
                                 <a href="companies_edit.php?id=<?= $company['company_id'] ?>" class="btn btn-primary">Edit Company</a>
+                                <a href="companies_delete.php?id=<?= $company['company_id'] ?>" class="btn btn-danger">Delete Company</a>
                                 <a href="companies.php" class="btn btn-secondary">Back</a>
                             </div>
 

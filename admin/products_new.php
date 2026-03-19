@@ -12,7 +12,7 @@ if (isset($_POST['submit_product'])) {
         $query = "INSERT INTO expense_products (product_name, created_at) VALUES ('$product_name', NOW())";
 
         if (mysqli_query($conn, $query)) {
-            $_SESSION['alert'] = "success";
+            $_SESSION['alert'] = "Product added successfully!";
             header("Location: products.php");
             exit();
         } else {
@@ -27,19 +27,15 @@ $alert = $_SESSION['alert'] ?? null;
 unset($_SESSION['alert']);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="products.php" class="tip-bottom"><i class="icon-home"></i> Products</a>
-            <a href="#" class="current">Add New Product</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
-        <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
+        <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
 
-                <?php if ($alert == "success") { ?>
+                <!-- Alert Messages -->
+                <?php if ($alert == "Product added successfully!") { ?>
                     <div class="alert alert-success">Product added successfully!</div>
                 <?php } elseif ($alert == "error") { ?>
                     <div class="alert alert-danger">Error: Unable to save product.</div>
@@ -47,9 +43,9 @@ unset($_SESSION['alert']);
                     <div class="alert alert-warning">Please enter a product name.</div>
                 <?php } ?>
 
-                <div class="widget-box" style="max-width: 600px; margin: 0 auto;">
+                <!-- Product Form -->
+                <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-align-justify"></i></span>
                         <h5>New Product Information</h5>
                     </div>
 

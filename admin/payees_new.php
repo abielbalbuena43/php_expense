@@ -34,7 +34,7 @@ if (isset($_POST['submit_payee'])) {
     ";
 
     if (mysqli_query($conn, $query)) {
-        $_SESSION['alert'] = "success";
+        $_SESSION['alert'] = "Payee added successfully!";
         header("Location: payees.php");
         exit();
     } else {
@@ -47,28 +47,21 @@ $alert = $_SESSION['alert'] ?? null;
 unset($_SESSION['alert']);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="dashboard.php" class="tip-bottom"><i class="icon-home"></i> Home</a>
-            <a href="payees.php" class="tip-bottom">Payees</a>
-            <a href="#" class="current">Add New Payee</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
-        <div class="row-fluid" style="background-color: white; min-height: 500px; padding: 20px;">
+        <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
 
-                <?php if ($alert == "success") { ?>
+                <?php if ($alert == "Payee added successfully!") { ?>
                     <div class="alert alert-success">Payee added successfully!</div>
                 <?php } elseif ($alert == "error") { ?>
                     <div class="alert alert-danger">Error: Unable to save payee.</div>
                 <?php } ?>
 
-                <div class="widget-box" style="max-width: 700px; margin: 0 auto;">
+                <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-align-justify"></i></span>
                         <h5>Payee Information</h5>
                     </div>
 
@@ -124,8 +117,13 @@ unset($_SESSION['alert']);
                             </div>
 
                             <div class="form-actions" style="padding-left: 180px;">
-                                <button type="submit" name="submit_payee" class="btn btn-success">Save Payee</button>
-                                <a href="payees.php" class="btn btn-secondary">Cancel</a>
+                                <button type="submit" name="submit_payee" class="btn btn-success">
+                                    Save Payee
+                                </button>
+
+                                <a href="payees.php" class="btn btn-secondary">
+                                    Cancel
+                                </a>
                             </div>
 
                         </form>

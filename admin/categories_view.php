@@ -1,7 +1,7 @@
 <?php
 ob_start();
 session_start();
-include "header.php"; 
+include "header.php";
 include "connection.php";
 
 // Validate category ID
@@ -29,22 +29,16 @@ if (!$result || mysqli_num_rows($result) == 0) {
 $category = mysqli_fetch_assoc($result);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="categories.php" class="tip-bottom"><i class="icon-home"></i> Categories</a>
-            <a href="#" class="current">View Category</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
-        <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
+        <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
 
                 <!-- View Category -->
-                <div class="widget-box" style="max-width: 600px; margin: 0 auto;">
+                <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-align-justify"></i></span>
                         <h5>Category Information</h5>
                     </div>
 
@@ -57,14 +51,6 @@ $category = mysqli_fetch_assoc($result);
                                 <div class="controls">
                                     <input type="text" class="span11" 
                                            value="<?= htmlspecialchars($category['category_name']) ?>" disabled>
-                                </div>
-                            </div>
-
-                            <!-- Remarks -->
-                            <div class="control-group">
-                                <label class="control-label">Remarks:</label>
-                                <div class="controls">
-                                    <textarea class="span11" disabled><?= htmlspecialchars($category['category_remarks'] ?? '') ?></textarea>
                                 </div>
                             </div>
 
@@ -89,6 +75,7 @@ $category = mysqli_fetch_assoc($result);
                             <!-- Action Buttons -->
                             <div class="form-actions" style="padding-left: 180px;">
                                 <a href="categories_edit.php?id=<?= $category['category_id'] ?>" class="btn btn-primary">Edit Category</a>
+                                <a href="categories_delete.php?id=<?= $category['category_id'] ?>" class="btn btn-danger">Delete Category</a>
                                 <a href="categories.php" class="btn btn-secondary">Back</a>
                             </div>
 

@@ -20,7 +20,7 @@ if (isset($_POST['submit_user'])) {
     ";
 
     if (mysqli_query($conn, $query)) {
-        $_SESSION['alert'] = "success";
+        $_SESSION['alert'] = "User added successfully!";
         header("Location: users.php");
         exit();
     } else {
@@ -33,28 +33,22 @@ $alert = $_SESSION['alert'] ?? null;
 unset($_SESSION['alert']);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="users.php" class="tip-bottom"><i class="icon-home"></i> Users</a>
-            <a href="#" class="current">Add New User</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content"> 
     <div class="container-fluid">
-        <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
+        <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
 
-                <?php if ($alert == "success") { ?>
+                <?php if ($alert == "User added successfully!") { ?>
                     <div class="alert alert-success">User added successfully!</div>
                 <?php } elseif ($alert == "error") { ?>
                     <div class="alert alert-danger">Error: Unable to save user.</div>
                 <?php } ?>
 
-                <div class="widget-box" style="max-width: 600px; margin: 0 auto;">
+                <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-align-justify"></i></span>
-                        <h5>User Information</h5>
+                        <h5>Add New User</h5>
                     </div>
 
                     <div class="widget-content" style="padding: 20px;">

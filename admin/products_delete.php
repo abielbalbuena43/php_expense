@@ -39,7 +39,7 @@ if (isset($_POST['confirm_delete'])) {
     $delete_query = "DELETE FROM expense_products WHERE product_id = $product_id";
 
     if (mysqli_query($conn, $delete_query)) {
-        $_SESSION['alert'] = "deleted";
+        $_SESSION['alert'] = "Product deleted successfully!";
         header("Location: products.php");
         exit();
     } else {
@@ -52,14 +52,9 @@ $alert = $_SESSION['alert'] ?? null;
 unset($_SESSION['alert']);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="products.php" class="tip-bottom"><i class="icon-home"></i> Products</a>
-            <a href="#" class="current">Delete Product</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
         <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
             <div class="span12">
@@ -76,7 +71,6 @@ unset($_SESSION['alert']);
                 <!-- Delete Confirmation -->
                 <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-trash"></i></span>
                         <h5>Delete Product Confirmation</h5>
                     </div>
 
@@ -93,8 +87,8 @@ unset($_SESSION['alert']);
                                 <td><?= htmlspecialchars($product['product_name']) ?></td>
                             </tr>
                             <tr>
-                                <th>Date Created</th>
-                                <td><?= htmlspecialchars($product['created_at']) ?></td>
+                                <th>Created At</th>
+                                <td><?= date('M d, Y', strtotime($product['created_at'])) ?></td>
                             </tr>
                         </table>
 

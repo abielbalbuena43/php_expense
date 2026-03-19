@@ -12,7 +12,7 @@ if (isset($_POST['submit_reseller'])) {
         $query = "INSERT INTO resellers (reseller_name, reseller_created_at) VALUES ('$reseller_name', NOW())";
 
         if (mysqli_query($conn, $query)) {
-            $_SESSION['alert'] = "success";
+            $_SESSION['alert'] = "Reseller added successfully!";
             header("Location: resellers.php");
             exit();
         } else {
@@ -27,19 +27,15 @@ $alert = $_SESSION['alert'] ?? null;
 unset($_SESSION['alert']);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="resellers.php" class="tip-bottom"><i class="icon-home"></i> Resellers</a>
-            <a href="#" class="current">Add New Reseller</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
-        <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
+        <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
 
-                <?php if ($alert == "success") { ?>
+                <!-- Alert Messages -->
+                <?php if ($alert == "Reseller added successfully!") { ?>
                     <div class="alert alert-success">Reseller added successfully!</div>
                 <?php } elseif ($alert == "error") { ?>
                     <div class="alert alert-danger">Error: Unable to save reseller.</div>
@@ -47,9 +43,9 @@ unset($_SESSION['alert']);
                     <div class="alert alert-warning">Please enter a reseller name.</div>
                 <?php } ?>
 
-                <div class="widget-box" style="max-width: 600px; margin: 0 auto;">
+                <!-- Reseller Form -->
+                <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-align-justify"></i></span>
                         <h5>New Reseller Information</h5>
                     </div>
 

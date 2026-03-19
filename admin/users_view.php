@@ -29,22 +29,16 @@ if (!$result || mysqli_num_rows($result) == 0) {
 $user = mysqli_fetch_assoc($result);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="users.php" class="tip-bottom"><i class="icon-home"></i> Users</a>
-            <a href="#" class="current">View User</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
-        <div class="row-fluid" style="background-color: white; min-height: 400px; padding: 20px;">
+        <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
 
-                <!-- View User -->
-                <div class="widget-box" style="max-width: 700px; margin: 0 auto;">
+                <!-- User Information -->
+                <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-user"></i></span>
                         <h5>User Information</h5>
                     </div>
 
@@ -86,6 +80,7 @@ $user = mysqli_fetch_assoc($result);
                             <!-- Action Buttons -->
                             <div class="form-actions" style="padding-left: 180px;">
                                 <a href="users_edit.php?id=<?= $user['user_id'] ?>" class="btn btn-primary">Edit User</a>
+                                <a href="users_delete.php?id=<?= $user['user_id'] ?>" class="btn btn-danger">Delete User</a>
                                 <a href="users.php" class="btn btn-secondary">Back</a>
                             </div>
 

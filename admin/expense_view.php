@@ -42,13 +42,9 @@ if (!$result || mysqli_num_rows($result) == 0) {
 $expense = mysqli_fetch_assoc($result);
 ?>
 
+<link rel="stylesheet" href="css/layout.css" />
+
 <div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="expenses.php" class="tip-bottom"><i class="icon-home"></i> Expenses</a>
-            <a href="#" class="current">View Expense</a>
-        </div>
-    </div>
 
     <div class="container-fluid">
         <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
@@ -57,7 +53,7 @@ $expense = mysqli_fetch_assoc($result);
                 <!-- View Expense -->
                 <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-align-justify"></i></span>
+
                         <h5>Expense Information</h5>
                     </div>
 
@@ -249,6 +245,7 @@ $expense = mysqli_fetch_assoc($result);
                             <!-- Action Buttons -->
                             <div class="form-actions" style="padding-left: 180px;">
                                 <a href="expense_edit.php?id=<?= $expense['expense_id'] ?>" class="btn btn-primary">Edit Expense</a>
+                                <a href="expense_delete.php?id=<?= $expense['expense_id'] ?>" class="btn btn-danger">Delete Expense</a>
                                 <a href="expenses.php" class="btn btn-secondary">Back</a>
                             </div>
 

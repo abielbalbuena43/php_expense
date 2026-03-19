@@ -42,14 +42,9 @@ $expenses_query = "
 $expenses_result = mysqli_query($conn, $expenses_query);
 ?>
 
-<div id="content">
-    <div id="content-header">
-        <div id="breadcrumb">
-            <a href="resellers.php" class="tip-bottom"><i class="icon-home"></i> Resellers</a>
-            <a href="#" class="current">View Reseller</a>
-        </div>
-    </div>
+<link rel="stylesheet" href="css/layout.css">
 
+<div id="content">
     <div class="container-fluid">
         <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
@@ -57,7 +52,6 @@ $expenses_result = mysqli_query($conn, $expenses_query);
                 <!-- View Reseller Details -->
                 <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">
-                        <span class="icon"><i class="icon-user"></i></span>
                         <h5>Reseller Information</h5>
                     </div>
 
@@ -83,6 +77,7 @@ $expenses_result = mysqli_query($conn, $expenses_query);
                             <!-- Action Buttons -->
                             <div class="form-actions" style="padding-left: 180px;">
                                 <a href="resellers_edit.php?id=<?= $reseller['reseller_id'] ?>" class="btn btn-primary">Edit Reseller</a>
+                                <a href="resellers_delete.php?id=<?= $reseller['reseller_id'] ?>" class="btn btn-danger">Delete Reseller</a>
                                 <a href="resellers.php" class="btn btn-secondary">Back</a>
                             </div>
 
@@ -96,7 +91,6 @@ $expenses_result = mysqli_query($conn, $expenses_query);
                         <table class="table table-bordered table-striped" id="resellerExpensesTable">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
                                     <th>OR Number</th>
                                     <th>Date</th>
                                     <th>Company</th>
@@ -109,7 +103,6 @@ $expenses_result = mysqli_query($conn, $expenses_query);
                                 <?php if ($expenses_result && mysqli_num_rows($expenses_result) > 0): ?>
                                     <?php while ($row = mysqli_fetch_assoc($expenses_result)): ?>
                                         <tr>
-                                            <td><?= $row['expense_id'] ?></td>
                                             <td><?= htmlspecialchars($row['expense_or_number']) ?></td>
                                             <td><?= date('M d, Y', strtotime($row['expense_date'])) ?></td>
                                             <td><?= htmlspecialchars($row['company_name']) ?></td>
