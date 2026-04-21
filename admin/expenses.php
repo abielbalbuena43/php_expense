@@ -14,7 +14,7 @@ function setAlert($type, $message) {
 }
 
 /* -------------------------------
-   HANDLE SUCCESS REDIRECTS
+   SAMPLE COMMENT
 --------------------------------*/
 if (isset($_GET['success'])) {
 
