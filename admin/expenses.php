@@ -52,6 +52,22 @@ if (isset($_GET['month']) && isset($_GET['year'])) {
 }
 
 /* -------------------------------
+   DATE RANGE FILTER LOGIC
+--------------------------------*/
+function parseFilterDate($value) {
+    if (empty($value)) {
+        return null;
+    }
+
+    $date = DateTime::createFromFormat('Y-m-d', $value);
+
+    return ($date && $date->format('Y-m-d') === $value) ? $value : null;
+}
+
+$selectedDateFrom = parseFilterDate($_GET['date_from'] ?? '');
+$selectedDateTo = parseFilterDate($_GET['date_to'] ?? '');
+
+/* -------------------------------
    HANDLE DELETE
 --------------------------------*/
 if (
@@ -91,7 +107,7 @@ if (
 
     $deleteStmt->close();
 
-    header("Location: " . $_SERVER['PHP_SELF'] . (isset($_GET['month']) ? '?' . http_build_query($_GET) : ''));
+    header("Location: " . $_SERVER['PHP_SELF'] . (!empty($_GET) ? '?' . http_build_query($_GET) : ''));
     exit();
 }
 
@@ -122,6 +138,7 @@ INNER JOIN expense_categories cat ON e.expense_category_id = cat.category_id
 
 $params = [];
 $types = "";
+$whereClauses = [];
 
 if (!empty($selectedPeriods)) {
 
@@ -134,7 +151,26 @@ if (!empty($selectedPeriods)) {
         $types .= "ii";
     }
 
-    $sql .= " WHERE " . implode(" OR ", $conditions);
+    $whereClauses[] = "(" . implode(" OR ", $conditions) . ")";
+}
+
+if ($selectedDateFrom && $selectedDateTo) {
+    $whereClauses[] = "DATE(e.expense_date) BETWEEN ? AND ?";
+    $params[] = $selectedDateFrom;
+    $params[] = $selectedDateTo;
+    $types .= "ss";
+} elseif ($selectedDateFrom) {
+    $whereClauses[] = "DATE(e.expense_date) >= ?";
+    $params[] = $selectedDateFrom;
+    $types .= "s";
+} elseif ($selectedDateTo) {
+    $whereClauses[] = "DATE(e.expense_date) <= ?";
+    $params[] = $selectedDateTo;
+    $types .= "s";
+}
+
+if (!empty($whereClauses)) {
+    $sql .= " WHERE " . implode(" AND ", $whereClauses);
 }
 
 $sql .= " ORDER BY e.expense_date DESC, e.expense_id DESC LIMIT 100";
@@ -156,6 +192,30 @@ $periodLabel = !empty($selectedPeriods)
     ? implode(', ', array_map(function($p) {
         return date('F Y', mktime(0, 0, 0, $p['month'], 1, $p['year']));
     }, $selectedPeriods))
+    : 'All Time';
+
+$dateRangeLabel = 'All Dates';
+
+if ($selectedDateFrom && $selectedDateTo) {
+    $dateRangeLabel = date('M d, Y', strtotime($selectedDateFrom)) . ' to ' . date('M d, Y', strtotime($selectedDateTo));
+} elseif ($selectedDateFrom) {
+    $dateRangeLabel = 'From ' . date('M d, Y', strtotime($selectedDateFrom));
+} elseif ($selectedDateTo) {
+    $dateRangeLabel = 'Until ' . date('M d, Y', strtotime($selectedDateTo));
+}
+
+$activeLabels = [];
+
+if (!empty($selectedPeriods)) {
+    $activeLabels[] = $periodLabel;
+}
+
+if ($selectedDateFrom || $selectedDateTo) {
+    $activeLabels[] = $dateRangeLabel;
+}
+
+$filterLabel = !empty($activeLabels)
+    ? implode(' | ', $activeLabels)
     : 'All Time';
 ?>
 
@@ -228,6 +288,14 @@ unset($_SESSION['alert']);
 </h4>
 
 <form method="get" id="filterForm">
+
+<?php if ($selectedDateFrom): ?>
+<input type="hidden" name="date_from" value="<?= htmlspecialchars($selectedDateFrom) ?>">
+<?php endif; ?>
+
+<?php if ($selectedDateTo): ?>
+<input type="hidden" name="date_to" value="<?= htmlspecialchars($selectedDateTo) ?>">
+<?php endif; ?>
 
 <div id="periodContainer">
 
@@ -310,6 +378,50 @@ Clear Filter
 
 </form>
 
+<h4 style="margin-top: 20px;">
+    <i class="icon-calendar"></i>
+    Filter by Date Range (<?= htmlspecialchars($dateRangeLabel) ?>)
+</h4>
+
+<form method="get" id="rangeFilterForm">
+
+<?php if (!empty($selectedPeriods)): ?>
+<?php foreach ($selectedPeriods as $p): ?>
+<input type="hidden" name="month[]" value="<?= (int)$p['month'] ?>">
+<input type="hidden" name="year[]" value="<?= (int)$p['year'] ?>">
+<?php endforeach; ?>
+<?php endif; ?>
+
+<div class="period-row">
+
+<input
+type="date"
+name="date_from"
+value="<?= htmlspecialchars($selectedDateFrom ?? '') ?>"
+>
+
+<input
+type="date"
+name="date_to"
+value="<?= htmlspecialchars($selectedDateTo ?? '') ?>"
+>
+
+</div>
+
+<div class="filter-actions">
+
+<button type="submit" class="btn btn-primary">
+Apply Date Range
+</button>
+
+<button type="button" id="clearDateFilter" class="btn btn-secondary">
+Clear Date Range
+</button>
+
+</div>
+
+</form>
+
 </div>
 
 
@@ -320,7 +432,7 @@ Clear Filter
 <div class="table-header">
 
 <h3>
-Expenses List (<?= htmlspecialchars($periodLabel) ?>)
+Expenses List (<?= htmlspecialchars($filterLabel) ?>)
 </h3>
 
 <span class="table-stats">
@@ -364,8 +476,9 @@ data-href="expense_view.php?id=<?= $row['expense_id'] ?>"
 <td><?= htmlspecialchars($row['category_name']) ?></td>
 
 <td class="amount-col">
-₱<?= number_format($row['expense_total_receipt_amount'], 2) ?>
+&#8369;<?= number_format($row['expense_total_receipt_amount'], 2) ?>
 </td>
+
 
 </tr>
 
@@ -461,7 +574,19 @@ $(document).ready(function(){
     });
 
     $("#clearFilter").click(function(){
-        window.location.href = window.location.pathname;
+        const url = new URL(window.location.href);
+        url.searchParams.delete("month[]");
+        url.searchParams.delete("year[]");
+        url.searchParams.delete("month");
+        url.searchParams.delete("year");
+        window.location.href = url.pathname + (url.search ? url.search : "");
+    });
+
+    $("#clearDateFilter").click(function(){
+        const url = new URL(window.location.href);
+        url.searchParams.delete("date_from");
+        url.searchParams.delete("date_to");
+        window.location.href = url.pathname + (url.search ? url.search : "");
     });
 
 });

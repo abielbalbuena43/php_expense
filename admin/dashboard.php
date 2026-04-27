@@ -4,16 +4,26 @@ include "connection.php";
 include "header.php";
 
 // ---------- Metrics ----------
-$selectedMonth = intval($_GET['month'] ?? date('m'));
+$selectedMonth = $_GET['month'] ?? date('m');
 $selectedYear = intval($_GET['year'] ?? date('Y'));
+$isAnnual = ($selectedMonth === 'annual');
 
-// Total Expenses (Selected Month/Year) - Prepared for securitya
+$expenseWhereClause = $isAnnual
+    ? "YEAR(expense_date) = ?"
+    : "MONTH(expense_date) = ? AND YEAR(expense_date) = ?";
+
+$expenseWhereTypes = $isAnnual ? "i" : "ii";
+$expenseWhereParams = $isAnnual
+    ? [$selectedYear]
+    : [intval($selectedMonth), $selectedYear];
+
+// Total Expenses (Selected Month/Year) - Prepared for security
 $totalExpensesStmt = $conn->prepare("
-    SELECT COALESCE(SUM(expense_total_receipt_amount), 0) AS total 
-    FROM expenses 
-    WHERE MONTH(expense_date) = ? AND YEAR(expense_date) = ?
+    SELECT COALESCE(SUM(expense_total_receipt_amount), 0) AS total
+    FROM expenses
+    WHERE $expenseWhereClause
 ");
-$totalExpensesStmt->bind_param("ii", $selectedMonth, $selectedYear);
+$totalExpensesStmt->bind_param($expenseWhereTypes, ...$expenseWhereParams);
 $totalExpensesStmt->execute();
 $totalExpensesResult = $totalExpensesStmt->get_result();
 $totalExpensesRow = $totalExpensesResult->fetch_assoc();
@@ -25,12 +35,12 @@ $topCategoryStmt = $conn->prepare("
     SELECT c.category_name, COALESCE(SUM(e.expense_total_receipt_amount), 0) AS total
     FROM expenses e
     JOIN expense_categories c ON e.expense_category_id = c.category_id
-    WHERE MONTH(e.expense_date) = ? AND YEAR(e.expense_date) = ?
+    WHERE " . str_replace("expense_date", "e.expense_date", $expenseWhereClause) . "
     GROUP BY c.category_name
     ORDER BY total DESC
     LIMIT 1
 ");
-$topCategoryStmt->bind_param("ii", $selectedMonth, $selectedYear);
+$topCategoryStmt->bind_param($expenseWhereTypes, ...$expenseWhereParams);
 $topCategoryStmt->execute();
 $topCategoryResult = $topCategoryStmt->get_result();
 $topCategoryRow = $topCategoryResult->fetch_assoc();
@@ -38,16 +48,23 @@ $topCategory = $topCategoryRow['category_name'] ?? "None";
 $topCategoryStmt->close();
 
 // Fetch budget for selected month/year
-$budgetStmt = $conn->prepare("SELECT amount FROM budgets WHERE month = ? AND year = ? LIMIT 1");
-$budgetStmt->bind_param("ii", $selectedMonth, $selectedYear);
+$budgetSql = $isAnnual
+    ? "SELECT COALESCE(SUM(amount), 0) AS amount FROM budgets WHERE year = ?"
+    : "SELECT COALESCE(SUM(amount), 0) AS amount FROM budgets WHERE month = ? AND year = ?";
+$budgetStmt = $conn->prepare($budgetSql);
+$budgetTypes = $isAnnual ? "i" : "ii";
+$budgetParams = $isAnnual
+    ? [$selectedYear]
+    : [intval($selectedMonth), $selectedYear];
+$budgetStmt->bind_param($budgetTypes, ...$budgetParams);
 $budgetStmt->execute();
 $budgetResult = $budgetStmt->get_result();
 $budgetRow = $budgetResult->fetch_assoc();
-$budgetTotal = $budgetRow['amount'] ?? null;
+$budgetTotal = isset($budgetRow['amount']) ? floatval($budgetRow['amount']) : 0;
 $budgetStmt->close();
 
 // Calculate utilization if budget exists
-if ($budgetTotal !== null && $budgetTotal > 0) {
+if ($budgetTotal > 0) {
     $budgetUtilization = ($totalExpenses / $budgetTotal) * 100;
     $budgetDisplay = number_format($budgetUtilization, 2) . '%';
 } else {
@@ -59,11 +76,11 @@ $pieDataStmt = $conn->prepare("
     SELECT c.category_name, COALESCE(SUM(e.expense_total_receipt_amount), 0) AS total
     FROM expenses e
     JOIN expense_categories c ON e.expense_category_id = c.category_id
-    WHERE MONTH(e.expense_date) = ? AND YEAR(e.expense_date) = ?
+    WHERE " . str_replace("expense_date", "e.expense_date", $expenseWhereClause) . "
     GROUP BY c.category_name
     HAVING total > 0
 ");
-$pieDataStmt->bind_param("ii", $selectedMonth, $selectedYear);
+$pieDataStmt->bind_param($expenseWhereTypes, ...$expenseWhereParams);
 $pieDataStmt->execute();
 $pieResult = $pieDataStmt->get_result();
 $pieLabels = [];
@@ -81,16 +98,18 @@ $recentActivityStmt = $conn->prepare("
     FROM expenses e
     LEFT JOIN companies c ON e.expense_company_id = c.company_id
     LEFT JOIN expense_categories cat ON e.expense_category_id = cat.category_id
-    WHERE MONTH(e.expense_date) = ? AND YEAR(e.expense_date) = ?
+    WHERE " . str_replace("expense_date", "e.expense_date", $expenseWhereClause) . "
     ORDER BY e.expense_date DESC
     LIMIT 5
 ");
-$recentActivityStmt->bind_param("ii", $selectedMonth, $selectedYear);
+$recentActivityStmt->bind_param($expenseWhereTypes, ...$expenseWhereParams);
 $recentActivityStmt->execute();
 $recentActivityResult = $recentActivityStmt->get_result();
 $recentActivityStmt->close();
 
-$selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedYear));
+$selectedPeriodLabel = $isAnnual
+    ? 'Annual ' . $selectedYear
+    : date('F Y', mktime(0, 0, 0, intval($selectedMonth), 1, $selectedYear));
 ?>
 
 <!DOCTYPE html>
@@ -118,7 +137,7 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
         /* ============================================
            DASHBOARD STYLING - Clean & Proper Positioning
            ============================================ */
-        
+
         :root {
             --primary-color: #4e54c8;
             --primary-dark: #3a3f9e;
@@ -140,8 +159,8 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
             --text-main: #1f2937;
             --text-muted: #6b7280;
 
-            --border-color: #e5e7eb;          /* tables/cards */
-            --filter-border-color: #000000;   /* filter inputs */
+            --border-color: #e5e7eb;
+            --filter-border-color: #000000;
 
             --bg-card: #ffffff;
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
@@ -271,14 +290,20 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
         }
 
         .chart-box {
-          
-            padding: 20px;
+            padding: 0;
+        }
+
+        .chart-canvas-wrap {
+            width: 360px;
+            height: 360px;
+            margin: 20px auto;
+            position: relative;
         }
 
         .chart-box canvas {
-            width: 350px !important;
-            height: 350px !important;
-            margin: auto;
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
         }
 
         /* Logs Box */
@@ -347,6 +372,12 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
             .chart-container {
                 flex-direction: column;
             }
+
+            .chart-canvas-wrap {
+                width: 100%;
+                max-width: 360px;
+                height: 360px;
+            }
         }
     </style>
 </head>
@@ -371,11 +402,12 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
 
                         <select name="month">
 
-                            <?php 
+                            <?php
                             $months = [
-                                '01'=>'January','02'=>'February','03'=>'March','04'=>'April',
-                                '05'=>'May','06'=>'June','07'=>'July','08'=>'August',
-                                '09'=>'September','10'=>'October','11'=>'November','12'=>'December'
+                                'annual' => 'Annual',
+                                '01' => 'January', '02' => 'February', '03' => 'March', '04' => 'April',
+                                '05' => 'May', '06' => 'June', '07' => 'July', '08' => 'August',
+                                '09' => 'September', '10' => 'October', '11' => 'November', '12' => 'December'
                             ];
 
                             foreach ($months as $val => $name) {
@@ -388,7 +420,7 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
 
                         <select name="year">
 
-                            <?php 
+                            <?php
                             $currentYear = date('Y');
 
                             for ($y = $currentYear; $y >= $currentYear - 9; $y--) {
@@ -418,7 +450,7 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
 
             <div class="summary-box">
                 <h4>TOTAL EXPENSES (<?= htmlspecialchars($selectedPeriodLabel) ?>)</h4>
-                <p>₱<?= number_format($totalExpenses, 2) ?></p>
+                <p>&#8369;<?= number_format($totalExpenses, 2) ?></p>
             </div>
 
             <div class="summary-box">
@@ -439,7 +471,9 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
             <!-- Pie Chart -->
             <div class="chart-box">
                 <h4>Expense Breakdown by Category</h4>
-                <canvas id="idPieChart"></canvas>
+                <div class="chart-canvas-wrap">
+                    <canvas id="idPieChart"></canvas>
+                </div>
             </div>
 
             <!-- Recent Activity -->
@@ -486,7 +520,7 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
                                     </td>
 
                                     <td style="padding:8px;" class="amount-col">
-                                        ₱<?= number_format($row['expense_total_receipt_amount'], 2) ?>
+                                        &#8369;<?= number_format($row['expense_total_receipt_amount'], 2) ?>
                                     </td>
                                 </tr>
 
@@ -516,7 +550,6 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
         </div>
 
     </div>
-    
 
 </div>
 
@@ -546,17 +579,20 @@ $selectedPeriodLabel = date('F Y', mktime(0, 0, 0, $selectedMonth, 1, $selectedY
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
-                legend: { 
-                    position: 'right',
+            maintainAspectRatio: true,
+            aspectRatio: 1,
+            plugins: {
+                legend: {
+                    position: 'bottom',
                     labels: {
+                        boxWidth: 14,
+                        padding: 12,
                         font: {
                             family: "'Open Sans', sans-serif",
                             size: 12
                         }
                     }
-                } 
+                }
             },
             cutout: '60%'
         }
