@@ -6,7 +6,17 @@ include "connection.php";
 
 // Fetch companies, payees, categories, resellers, end users, products
 $companies = mysqli_query($conn, "SELECT company_id, company_name, company_tin FROM companies ORDER BY company_name ASC");
-$payees = mysqli_query($conn, "SELECT payee_id, payee_name FROM payees ORDER BY payee_name ASC");
+$payees = mysqli_query($conn, "
+    SELECT 
+        payee_id, 
+        payee_name, 
+        payee_tin,
+        payee_address1,
+        payee_address2,
+        payee_category
+    FROM payees 
+    ORDER BY payee_name ASC
+");
 $categories = mysqli_query($conn, "SELECT category_id, category_name FROM expense_categories ORDER BY category_name ASC");
 $resellers = mysqli_query($conn, "SELECT reseller_id, reseller_name FROM resellers ORDER BY reseller_name ASC");
 $end_users = mysqli_query($conn, "SELECT end_user_id, end_user_name FROM expense_end_users ORDER BY end_user_name ASC");
@@ -34,15 +44,21 @@ if (isset($_POST['submit_expense'])) {
     $zero_rated = floatval($_POST['expense_zero_rated']);
     $vat_rate = floatval($_POST['expense_vat_rate']);
 
-// Fixed Calculations
-// Total Purchases = Sum of all taxable purchase amounts (net of VAT)
-$total_purchases = $gross_taxable + $services + $capital_goods + $goods_other;
-// Total Input Tax = VAT on total purchases
-$total_input_tax = round($total_purchases * ($vat_rate / 100), 2);
-// Taxable (Net of VAT) = Total purchases minus input tax
-$taxable_net_vat = round($total_purchases - $total_input_tax, 2);
-// Total Receipt Amount = Net purchases + input tax + other non-taxable amounts
-$total_receipt_amount = round($total_purchases + $service_charge + $exempt + $zero_rated + $total_input_tax, 2);
+    // ============================
+    // FIXED CALCULATIONS (CORRECT)
+    // ============================
+
+    // Total Purchases (VAT-INCLUSIVE)
+    $total_purchases = $gross_taxable + $services + $capital_goods + $goods_other;
+
+    // Net of VAT
+    $taxable_net_vat = round($total_purchases / (1 + ($vat_rate / 100)), 2);
+
+    // VAT portion
+    $total_input_tax = round($total_purchases - $taxable_net_vat, 2);
+
+    // Total Receipt Amount (same as your reference system)
+    $total_receipt_amount = round($total_purchases + $service_charge + $exempt + $zero_rated, 2);
 
     // Insert into DB
     $query = "
@@ -96,10 +112,8 @@ $total_receipt_amount = round($total_purchases + $service_charge + $exempt + $ze
     ";
 
     if (mysqli_query($conn, $query)) {
-        // Get the newly inserted expense ID
         $expense_id = mysqli_insert_id($conn);
         
-        // Log the action
         $logQuery = "INSERT INTO logs (log_action, log_user, log_details, log_date) VALUES ('Expense created', '" . mysqli_real_escape_string($conn, $_SESSION['username']) . "', 'Expense ID: $expense_id', NOW())";
         mysqli_query($conn, $logQuery);
         
@@ -144,8 +158,11 @@ unset($_SESSION['alert']);
                                     <select name="expense_company_id" id="companySelect" class="span11" required>
                                         <option value="" disabled selected>Select Company</option>
                                         <?php while ($row = mysqli_fetch_assoc($companies)) { ?>
-                                            <option value="<?= $row['company_id'] ?>" data-tin="<?= $row['company_tin'] ?>">
-                                                <?= $row['company_name'] ?>
+                                            <option 
+                                                value="<?= $row['company_id'] ?>" 
+                                                data-tin="<?= htmlspecialchars($row['company_tin']) ?>"
+                                            >
+                                                <?= htmlspecialchars($row['company_name']) ?>
                                             </option>
                                         <?php } ?>
                                     </select>
@@ -164,12 +181,35 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Payee:</label>
                                 <div class="controls">
-                                    <select name="expense_payee_id" class="span11" required>
+                                    <select name="expense_payee_id" id="payeeSelect" class="span11" required>
                                         <option value="" disabled selected>Select Payee</option>
                                         <?php while ($row = mysqli_fetch_assoc($payees)) { ?>
-                                            <option value="<?= $row['payee_id'] ?>"><?= $row['payee_name'] ?></option>
+                                            <option 
+                                                value="<?= $row['payee_id'] ?>"
+                                                data-tin="<?= htmlspecialchars($row['payee_tin']) ?>"
+                                                data-address1="<?= htmlspecialchars($row['payee_address1']) ?>"
+                                                data-address2="<?= htmlspecialchars($row['payee_address2']) ?>"
+                                                data-category="<?= htmlspecialchars($row['payee_category']) ?>"
+                                            >
+                                                <?= htmlspecialchars($row['payee_name']) ?>
+                                            </option>
                                         <?php } ?>
                                     </select>
+                                </div>
+                            </div>
+
+                            <!-- Payee TIN (Auto-filled) -->
+                            <div class="control-group">
+                                <label class="control-label">Payee TIN:</label>
+                                <div class="controls">
+                                    <input type="text" class="span11" id="payeeTin" readonly placeholder="Select a payee">
+                                </div>
+                            </div>
+
+                            <div class="control-group">
+                                <label class="control-label">Payee Address:</label>
+                                <div class="controls">
+                                    <input type="text" class="span11" id="payeeAddress" readonly placeholder="Select a payee">
                                 </div>
                             </div>
 
@@ -354,57 +394,84 @@ unset($_SESSION['alert']);
 </div>
 
 <script>
-const calcFields = document.querySelectorAll('.calc-field');
-const totalPurchasesInput = document.getElementById('totalPurchases');
-const totalInputTaxInput = document.getElementById('totalInputTax');
-const totalReceiptInput = document.getElementById('totalReceiptAmount');
-const taxableNetVatInput = document.getElementById('taxableNetVat');
+document.addEventListener('DOMContentLoaded', function () {
 
-function recalc() {
-    // Parse values safely (default to 0 if empty)
-    const gross_taxable = parseFloat(document.querySelector('[name="expense_gross_taxable"]').value) || 0;
-    const service_charge = parseFloat(document.querySelector('[name="expense_service_charge"]').value) || 0;
-    const services = parseFloat(document.querySelector('[name="expense_services"]').value) || 0;
-    const capital_goods = parseFloat(document.querySelector('[name="expense_capital_goods"]').value) || 0;
-    const goods_other = parseFloat(document.querySelector('[name="expense_goods_other_than_capital"]').value) || 0;
-    const exempt = parseFloat(document.querySelector('[name="expense_exempt"]').value) || 0;
-    const zero_rated = parseFloat(document.querySelector('[name="expense_zero_rated"]').value) || 0;
-    const vat_rate = parseFloat(document.querySelector('[name="expense_vat_rate"]').value) || 0;
+    const calcFields = document.querySelectorAll('.calc-field');
+    const totalPurchasesInput = document.getElementById('totalPurchases');
+    const totalInputTaxInput = document.getElementById('totalInputTax');
+    const totalReceiptInput = document.getElementById('totalReceiptAmount');
+    const taxableNetVatInput = document.getElementById('taxableNetVat');
+    const categorySelect = document.querySelector('[name="expense_category_id"]');
 
-    // 1. Total Purchases = Gross Taxable + Services + Capital Goods + Goods Other Than Capital Goods
-    const total_purchases = gross_taxable + services + capital_goods + goods_other;
-    totalPurchasesInput.value = total_purchases.toFixed(2);
+        function recalc() {
+        const gross_taxable = parseFloat(document.querySelector('[name="expense_gross_taxable"]').value) || 0;
+        const service_charge = parseFloat(document.querySelector('[name="expense_service_charge"]').value) || 0;
+        const services = parseFloat(document.querySelector('[name="expense_services"]').value) || 0;
+        const capital_goods = parseFloat(document.querySelector('[name="expense_capital_goods"]').value) || 0;
+        const goods_other = parseFloat(document.querySelector('[name="expense_goods_other_than_capital"]').value) || 0;
+        const exempt = parseFloat(document.querySelector('[name="expense_exempt"]').value) || 0;
+        const zero_rated = parseFloat(document.querySelector('[name="expense_zero_rated"]').value) || 0;
+        const vat_rate = parseFloat(document.querySelector('[name="expense_vat_rate"]').value) || 0;
 
-    // 2. Total Input Tax = Total Purchases * (VAT Rate / 100)
-    const total_input_tax = total_purchases * (vat_rate / 100);
-    totalInputTaxInput.value = total_input_tax.toFixed(2);
+        const total_purchases = gross_taxable + services + capital_goods + goods_other;
+        totalPurchasesInput.value = total_purchases.toFixed(2);
 
-    // 3. Taxable (Net of VAT) = Total Purchases - Total Input Tax
-    const taxable_net_vat = total_purchases - total_input_tax;
-    taxableNetVatInput.value = taxable_net_vat.toFixed(2);
+        const taxable_net_vat = parseFloat((total_purchases / (1 + (vat_rate / 100))).toFixed(2));
+        taxableNetVatInput.value = taxable_net_vat.toFixed(2);
 
-    // 4. Total Receipt Amount = Total Purchases + Service Charge + Exempt + Zero Rated + Total Input Tax
-    const total_receipt = total_purchases + service_charge + exempt + zero_rated + total_input_tax;
-    totalReceiptInput.value = total_receipt.toFixed(2);
-}
+        const total_input_tax = parseFloat((total_purchases - taxable_net_vat).toFixed(2));
+        totalInputTaxInput.value = total_input_tax.toFixed(2);
 
-// Run calculations when any calc field changes
-calcFields.forEach(input => {
-    input.addEventListener('input', recalc);
+        const total_receipt = total_purchases + service_charge + exempt + zero_rated;
+        totalReceiptInput.value = total_receipt.toFixed(2);
+    }
+
+    calcFields.forEach(input => {
+        input.addEventListener('input', recalc);
+    });
+
+    recalc();
+
+    // Allow manual category by default
+    categorySelect.removeAttribute('disabled');
+
+    // Auto-display company TIN
+    document.getElementById('companySelect').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const tin = selectedOption.getAttribute('data-tin') || '';
+        document.getElementById('companyTin').value = tin;
+    });
+
+    // Auto-display payee details
+    document.getElementById('payeeSelect').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+
+        const tin = selectedOption.getAttribute('data-tin') || '';
+        const address1 = selectedOption.getAttribute('data-address1') || '';
+        const address2 = selectedOption.getAttribute('data-address2') || '';
+        const category = selectedOption.getAttribute('data-category') || '';
+
+        document.getElementById('payeeTin').value = tin;
+        document.getElementById('payeeAddress').value = (address1 + ' ' + address2).trim();
+
+        if (category) {
+            const exists = [...categorySelect.options].some(opt => opt.value === category);
+
+            if (exists) {
+                categorySelect.value = category;
+                categorySelect.setAttribute('disabled', true);
+            }
+        } else {
+            categorySelect.removeAttribute('disabled');
+        }
+    });
+
+    // Ensure category is submitted
+    document.querySelector('form').addEventListener('submit', function() {
+        categorySelect.removeAttribute('disabled');
+    });
+
 });
-
-// Initialize calculations on page load
-recalc();
-
-// Auto-display company TIN
-document.getElementById('companySelect').addEventListener('change', function() {
-    const selectedOption = this.options[this.selectedIndex];
-    const tin = selectedOption.getAttribute('data-tin') || '';
-    document.getElementById('companyTin').value = tin;
-});
-
-
-
 </script>
 
 <?php include "footer.php"; ?>

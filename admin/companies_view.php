@@ -44,19 +44,16 @@ $company = mysqli_fetch_assoc($result);
                     <div class="widget-content" style="padding: 20px;">
                         <form class="form-horizontal">
 
-                            <!-- Company Name -->
+                            <!-- Company / TIN -->
                             <div class="control-group">
-                                <label class="control-label">Company Name:</label>
+                                <label class="control-label">TIN / Company:</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" value="<?= htmlspecialchars($company['company_name']) ?>" disabled>
-                                </div>
-                            </div>
-
-                            <!-- Company TIN -->
-                            <div class="control-group">
-                                <label class="control-label">TIN:</label>
-                                <div class="controls">
-                                    <input type="text" class="span11" value="<?= htmlspecialchars($company['company_tin']) ?>" disabled>
+                                    <input
+                                        type="text"
+                                        class="span11"
+                                        value="<?= htmlspecialchars($company['company_tin'] . ' - ' . $company['company_name']) ?>"
+                                        disabled
+                                    >
                                 </div>
                             </div>
 

@@ -144,8 +144,7 @@ Showing <?= $result->num_rows ?? 0 ?> records
 <thead>
 
 <tr>
-<th>Company Name</th>
-<th>TIN</th>
+<th>Company</th>
 <th>RDO Code</th>
 <th>Branch Code</th>
 <th>Trade Name</th>
@@ -167,8 +166,10 @@ class="clickable-row"
 data-href="companies_view.php?id=<?= $row['company_id'] ?>"
 >
 
-<td><?= htmlspecialchars($row['company_name']) ?></td>
-<td><?= htmlspecialchars($row['company_tin']) ?></td>
+<td>
+    <strong><?= htmlspecialchars($row['company_name']) ?></strong><br>
+    <small>TIN: <?= htmlspecialchars($row['company_tin']) ?></small>
+</td>
 <td><?= htmlspecialchars($row['rdo_code']) ?></td>
 <td><?= htmlspecialchars($row['branch_code']) ?></td>
 <td><?= htmlspecialchars($row['trade_name']) ?></td>
@@ -183,7 +184,7 @@ data-href="companies_view.php?id=<?= $row['company_id'] ?>"
 
 <tr>
 
-<td colspan="7">
+<td colspan="6">
 
 <div class="empty-state">
 
