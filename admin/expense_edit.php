@@ -51,14 +51,30 @@ if (isset($_POST['update_expense'])) {
     $capital_goods = floatval($_POST['expense_capital_goods']);
     $goods_other = floatval($_POST['expense_goods_other_than_capital']);
     $exempt = floatval($_POST['expense_exempt']);
-    $zero_rated = floatval($_POST['expense_zero_rated']);
+    $zero_rated = 0; // merged into exempt
     $vat_rate = floatval($_POST['expense_vat_rate']);
 
     // ===== Recalculate to prevent tampering =====
-    $total_purchases = $services + $capital_goods + $goods_other;
-    $total_input_tax = round($total_purchases * ($vat_rate / 100), 2);
-    $total_receipt_amount = round($gross_taxable + $service_charge + $exempt + $zero_rated + $total_input_tax, 2);  // Updated to include all components
-    $taxable_net_vat = round($total_purchases - $total_input_tax, 2);  // Added calculation for net VAT
+        if ($services > 0) {
+        $total_purchases = $services;
+    } elseif ($capital_goods > 0) {
+        $total_purchases = $capital_goods;
+    } elseif ($goods_other > 0) {
+        $total_purchases = $goods_other;
+    } else {
+        $total_purchases = $gross_taxable;
+    }
+        $total_input_tax = round($taxable_net_vat * ($vat_rate / 100), 2);
+        $total_receipt_amount = round(
+        $taxable_net_vat + $total_input_tax + $service_charge + $exempt,
+        2
+    );
+        if ($vat_rate == 0) {
+        $taxable_net_vat = floatval($_POST['expense_taxable_net_vat']);
+    } else {
+        $taxable_net_vat = $total_purchases - $exempt;
+        if ($taxable_net_vat < 0) $taxable_net_vat = 0;
+    }
 
     // Update query
     $query = "
@@ -104,6 +120,8 @@ if (isset($_POST['update_expense'])) {
 $alert = $_SESSION['alert'] ?? null;
 unset($_SESSION['alert']);
 ?>
+
+<link rel="stylesheet" href="css/layout.css">
 
 <div id="content">
     <div class="container-fluid">
@@ -280,21 +298,14 @@ unset($_SESSION['alert']);
                             </div>
 
                             <div class="control-group">
-                                <label class="control-label">Exempt:</label>
+                                <label class="control-label">Exempt / Zero Rated:</label>
                                 <div class="controls">
                                     <input type="number" step="0.01" class="span11 calc-field" name="expense_exempt"
                                            value="<?= $expense['expense_exempt'] == '0.00' ? '' : htmlspecialchars($expense['expense_exempt']) ?>" placeholder="0.00">
                                 </div>
                             </div>
 
-                            <div class="control-group">
-                                <label class="control-label">Zero Rated:</label>
-                                <div class="controls">
-                                    <input type="number" step="0.01" class="span11 calc-field" name="expense_zero_rated"
-                                           value="<?= $expense['expense_zero_rated'] == '0.00' ? '' : htmlspecialchars($expense['expense_zero_rated']) ?>" placeholder="0.00">
-                                </div>
-                            </div>
-
+                            <!-- Zero Rated removed (merged into Exempt) -->
                             <div class="control-group">
                                 <label class="control-label">VAT Rate (%):</label>
                                 <div class="controls">
@@ -349,31 +360,36 @@ unset($_SESSION['alert']);
                                 const taxableNetVatInput = document.getElementById("expense_taxable_net_vat");
 
                                 function recalc() {
-                                    // Get all field values or default to 0
                                     let grossTaxable = parseFloat(document.querySelector("input[name='expense_gross_taxable']").value) || 0;
                                     let serviceCharge = parseFloat(document.querySelector("input[name='expense_service_charge']").value) || 0;
                                     let services = parseFloat(document.querySelector("input[name='expense_services']").value) || 0;
                                     let capitalGoods = parseFloat(document.querySelector("input[name='expense_capital_goods']").value) || 0;
                                     let goodsOther = parseFloat(document.querySelector("input[name='expense_goods_other_than_capital']").value) || 0;
                                     let exempt = parseFloat(document.querySelector("input[name='expense_exempt']").value) || 0;
-                                    let zeroRated = parseFloat(document.querySelector("input[name='expense_zero_rated']").value) || 0;
                                     let vatRate = parseFloat(document.querySelector("input[name='expense_vat_rate']").value) || 0;
 
-                                    // --- Calculations ---
+                                    // PRIORITY LOGIC
+                                    let totalPurchases = 0;
+                                    if (services > 0) {
+                                        totalPurchases = services;
+                                    } else if (capitalGoods > 0) {
+                                        totalPurchases = capitalGoods;
+                                    } else if (goodsOther > 0) {
+                                        totalPurchases = goodsOther;
+                                    } else {
+                                        totalPurchases = grossTaxable;
+                                    }
 
-                                    // Total Purchases (taxable amounts only)
-                                    let totalPurchases = services + capitalGoods + goodsOther;
+                                    // TAXABLE NET
+                                    let taxableNetVat = totalPurchases - exempt;
+                                    if (taxableNetVat < 0) taxableNetVat = 0;
 
-                                    // Total Input Tax
-                                    let inputTax = totalPurchases * (vatRate / 100);
+                                    // VAT
+                                    let inputTax = taxableNetVat * (vatRate / 100);
 
-                                    // Taxable (Net of VAT)
-                                    let taxableNetVat = totalPurchases - inputTax;
+                                    // TOTAL RECEIPT
+                                    let totalReceipt = taxableNetVat + inputTax + serviceCharge + exempt;
 
-                                    // Total Receipt Amount
-                                    let totalReceipt = grossTaxable + serviceCharge + exempt + zeroRated + inputTax;
-
-                                    // --- Update fields ---
                                     totalPurchasesInput.value = totalPurchases.toFixed(2);
                                     inputTaxInput.value = inputTax.toFixed(2);
                                     totalReceiptInput.value = totalReceipt.toFixed(2);
