@@ -182,7 +182,7 @@ required
 </div>
 
 <!-- ACTIONS -->
-<div class="form-actions" style="padding-left: 180px;">
+<div class="form-actions action-buttons">
 
 <button type="submit" name="update_budget" class="btn btn-success">
 Update Budget

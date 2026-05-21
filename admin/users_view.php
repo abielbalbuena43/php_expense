@@ -78,7 +78,7 @@ $user = mysqli_fetch_assoc($result);
                             </div>
 
                             <!-- Action Buttons -->
-                            <div class="form-actions" style="padding-left: 180px;">
+                            <div class="form-actions action-buttons">
                                 <a href="users_edit.php?id=<?= $user['user_id'] ?>" class="btn btn-primary">Edit User</a>
                                 <a href="users_delete.php?id=<?= $user['user_id'] ?>" class="btn btn-danger">Delete User</a>
                                 <a href="users.php" class="btn btn-secondary">Back</a>

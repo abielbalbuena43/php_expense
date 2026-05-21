@@ -150,7 +150,7 @@ if (isset($_POST['submit_budget'])) {
                             </div>
 
                             <!-- Actions -->
-                            <div class="form-actions" style="padding-left:180px;">
+                            <div class="form-actions action-buttons">
                                 <button type="submit" name="submit_budget" class="btn btn-success">
                                     Save Budget
                                 </button>

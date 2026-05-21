@@ -132,7 +132,7 @@ $months = [
 
 <form method="post" style="margin-top: 20px;">
 
-<div class="form-actions" style="padding-left: 180px;">
+<div class="form-actions action-buttons">
 
 <button type="submit" name="confirm_delete" class="btn btn-danger">
 Confirm Delete

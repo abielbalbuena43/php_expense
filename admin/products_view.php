@@ -75,7 +75,7 @@ $expenses_result = mysqli_query($conn, $expenses_query);
                             </div>
 
                             <!-- Action Buttons -->
-                            <div class="form-actions" style="padding-left: 180px;">
+                            <div class="form-actions action-buttons">
                                 <a href="products_edit.php?id=<?= $product['product_id'] ?>" class="btn btn-primary">Edit Product</a>
                                 <a href="products_delete.php?id=<?= $product['product_id'] ?>" class="btn btn-danger">Delete Product</a>
                                 <a href="products.php" class="btn btn-secondary">Back</a>

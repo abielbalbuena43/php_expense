@@ -136,7 +136,7 @@ $company = mysqli_fetch_assoc($result);
                             </div>
 
                             <!-- Action Buttons -->
-                            <div class="form-actions" style="padding-left: 180px;">
+                            <div class="form-actions action-buttons">
                                 <a href="companies_edit.php?id=<?= $company['company_id'] ?>" class="btn btn-primary">Edit Company</a>
                                 <a href="companies_delete.php?id=<?= $company['company_id'] ?>" class="btn btn-danger">Delete Company</a>
                                 <a href="companies.php" class="btn btn-secondary">Back</a>

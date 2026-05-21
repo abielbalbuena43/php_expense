@@ -611,3 +611,34 @@ tr:hover .amount-col {
     color: #7f1d1d;
     border-color: #ef4444;
 }
+
+/* ==========================================
+   FORM ACTION BUTTONS (Edit / Delete / Back)
+========================================== */
+.form-actions.action-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 15px 0;
+}
+
+.form-actions.action-buttons .btn {
+    min-width: 120px;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .form-actions.action-buttons {
+        flex-direction: column;
+        gap: 12px;
+        padding-left: 0 !important;
+    }
+
+    .form-actions.action-buttons .btn {
+        width: 100%;
+        max-width: 320px;
+        margin: 0;
+    }
+}

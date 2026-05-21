@@ -243,7 +243,7 @@ $expense = mysqli_fetch_assoc($result);
                             </div>
 
                             <!-- Action Buttons -->
-                            <div class="form-actions" style="padding-left: 180px;">
+                            <div class="form-actions action-buttons">
                                 <a href="expense_edit.php?id=<?= $expense['expense_id'] ?>" class="btn btn-primary">Edit Expense</a>
                                 <a href="expense_delete.php?id=<?= $expense['expense_id'] ?>" class="btn btn-danger">Delete Expense</a>
                                 <a href="expenses.php" class="btn btn-secondary">Back</a>

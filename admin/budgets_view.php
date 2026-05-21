@@ -94,7 +94,7 @@ $months = [
                             </div>
 
                             <!-- Action Buttons -->
-                            <div class="form-actions" style="padding-left: 180px;">
+                            <div class="form-actions action-buttons">
                                 <a href="budgets_edit.php?id=<?= $budget['budget_id'] ?>" class="btn btn-primary">
                                     Edit Budget
                                 </a>

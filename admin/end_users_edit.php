@@ -90,7 +90,7 @@ unset($_SESSION['alert']);
                                 </div>
                             </div>
 
-                            <div class="form-actions" style="padding-left: 180px;">
+                            <div class="form-actions action-buttons">
                                 <button type="submit" name="update_end_user" class="btn btn-success">Update End User</button>
                                 <a href="end_users.php" class="btn btn-secondary">Cancel</a>
                             </div>

@@ -60,7 +60,7 @@ unset($_SESSION['alert']);
                                 </div>
                             </div>
 
-                            <div class="form-actions" style="padding-left: 180px;">
+                            <div class="form-actions action-buttons">
                                 <button type="submit" name="submit_reseller" class="btn btn-success">Save Reseller</button>
                                 <a href="resellers.php" class="btn btn-secondary">Cancel</a>
                             </div>

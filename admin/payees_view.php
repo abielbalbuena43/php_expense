@@ -109,7 +109,7 @@ $payee = mysqli_fetch_assoc($result);
                             </div>
 
                             <!-- Action Buttons -->
-                            <div class="form-actions" style="padding-left: 180px;">
+                            <div class="form-actions action-buttons">
                                 <a href="payees_edit.php?id=<?= $payee['payee_id'] ?>" class="btn btn-primary">Edit Payee</a>
                                 <a href="payees_delete.php?id=<?= $payee['payee_id'] ?>" class="btn btn-danger">Delete Payee</a>
                                 <a href="payees.php" class="btn btn-secondary">Back</a>

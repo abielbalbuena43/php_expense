@@ -116,7 +116,7 @@ unset($_SESSION['alert']);
                                 </div>
                             </div>
 
-                            <div class="form-actions" style="padding-left: 180px;">
+                            <div class="form-actions action-buttons">
                                 <button type="submit" name="submit_payee" class="btn btn-success">
                                     Save Payee
                                 </button>

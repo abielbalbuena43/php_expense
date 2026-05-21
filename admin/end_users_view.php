@@ -75,7 +75,7 @@ $expenses_result = mysqli_query($conn, $expenses_query);
                             </div>
 
                             <!-- Action Buttons -->
-                            <div class="form-actions" style="padding-left: 180px;">
+                            <div class="form-actions action-buttons">
                                 <a href="end_users_edit.php?id=<?= $end_user['end_user_id'] ?>" class="btn btn-primary">Edit End User</a>
                                 <a href="end_users_delete.php?id=<?= $end_user['end_user_id'] ?>" class="btn btn-danger">Delete End User</a>
                                 <a href="end_users.php" class="btn btn-secondary">Back</a>

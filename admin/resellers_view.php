@@ -75,7 +75,7 @@ $expenses_result = mysqli_query($conn, $expenses_query);
                             </div>
 
                             <!-- Action Buttons -->
-                            <div class="form-actions" style="padding-left: 180px;">
+                            <div class="form-actions action-buttons">
                                 <a href="resellers_edit.php?id=<?= $reseller['reseller_id'] ?>" class="btn btn-primary">Edit Reseller</a>
                                 <a href="resellers_delete.php?id=<?= $reseller['reseller_id'] ?>" class="btn btn-danger">Delete Reseller</a>
                                 <a href="resellers.php" class="btn btn-secondary">Back</a>

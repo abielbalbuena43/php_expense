@@ -220,7 +220,7 @@ if ($companyOptionsResult) {
                                 </div>
                             </div>
 
-                            <div class="form-actions" style="padding-left: 180px;">
+                            <div class="form-actions action-buttons">
                                 <button type="submit" name="update_company" class="btn btn-success">Update Company</button>
                                 <a href="companies.php" class="btn btn-secondary">Cancel</a>
                             </div>

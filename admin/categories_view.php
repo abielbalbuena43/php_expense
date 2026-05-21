@@ -73,7 +73,7 @@ $category = mysqli_fetch_assoc($result);
                             </div>
 
                             <!-- Action Buttons -->
-                            <div class="form-actions" style="padding-left: 180px;">
+                            <div class="form-actions action-buttons">
                                 <a href="categories_edit.php?id=<?= $category['category_id'] ?>" class="btn btn-primary">Edit Category</a>
                                 <a href="categories_delete.php?id=<?= $category['category_id'] ?>" class="btn btn-danger">Delete Category</a>
                                 <a href="categories.php" class="btn btn-secondary">Back</a>

@@ -87,7 +87,7 @@ unset($_SESSION['alert']);
                             </tr>
                         </table>
 
-                        <form action="" method="post" style="margin-top: 20px;">
+                        <div class="form-actions action-buttons">
                             <button type="submit" name="confirm_delete" class="btn btn-danger">
                                 <i class="icon-trash"></i> Confirm Delete
                             </button>
