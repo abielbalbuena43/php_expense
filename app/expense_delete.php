@@ -4,6 +4,12 @@ session_start();
 include "header.php";  // Moved to the top, before any logic
 include "connection.php";
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+$isAdmin = $_SESSION['role'] === 'admin';
+
 // Check if an expense ID is provided
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     $_SESSION['alert'] = "invalid";
@@ -34,7 +40,8 @@ $query = "
         e.expense_total_purchases,
         e.expense_total_receipt_amount,
         e.expense_taxable_net_vat,
-        e.expense_remarks
+        e.expense_remarks,
+        e.expense_created_by
     FROM expenses e
     INNER JOIN companies c ON e.expense_company_id = c.company_id
     INNER JOIN payees p ON e.expense_payee_id = p.payee_id
@@ -51,6 +58,12 @@ if (!$result || mysqli_num_rows($result) === 0) {
 }
 
 $expense = mysqli_fetch_assoc($result);
+
+if (!$isAdmin && intval($expense['expense_created_by']) !== intval($_SESSION['user_id'])) {
+    $_SESSION['alert'] = ['type' => 'error', 'message' => 'You are not authorized to delete this record.'];
+    header("Location: expenses.php");
+    exit();
+}
 
 // Handle delete confirmation
 if (isset($_POST['confirm_delete'])) {

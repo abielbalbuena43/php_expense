@@ -2,6 +2,15 @@
 include "connection.php";
 include "header.php";
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+if ($_SESSION['role'] !== 'admin') {
+    header("Location: dashboard.php");
+    exit();
+}
+
 // Fetch all resellers and count how many expenses are linked to each
 $sql = "
     SELECT 

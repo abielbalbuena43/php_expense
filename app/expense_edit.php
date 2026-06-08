@@ -4,6 +4,12 @@ session_start();
 include "header.php";
 include "connection.php";
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+$isAdmin = $_SESSION['role'] === 'admin';
+
 // Validate ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     header("Location: expenses.php");
@@ -22,7 +28,7 @@ $products = mysqli_query($conn, "SELECT product_id, product_name FROM expense_pr
 
 // Fetch current expense record
 $expense_query = mysqli_query($conn, "
-    SELECT e.*, c.company_tin
+    SELECT e.*, e.expense_created_by, c.company_tin
     FROM expenses e
     LEFT JOIN companies c ON e.expense_company_id = c.company_id
     WHERE e.expense_id = '$expense_id'
@@ -33,6 +39,12 @@ if (mysqli_num_rows($expense_query) === 0) {
     exit();
 }
 $expense = mysqli_fetch_assoc($expense_query);
+
+if (!$isAdmin && intval($expense['expense_created_by']) !== intval($_SESSION['user_id'])) {
+    $_SESSION['alert'] = ['type' => 'error', 'message' => 'You are not authorized to edit this record.'];
+    header("Location: expenses.php");
+    exit();
+}
 
 // Handle update form submission
 if (isset($_POST['update_expense'])) {
@@ -64,17 +76,17 @@ if (isset($_POST['update_expense'])) {
     } else {
         $total_purchases = $gross_taxable;
     }
-        $total_input_tax = round($taxable_net_vat * ($vat_rate / 100), 2);
-        $total_receipt_amount = round(
-        $taxable_net_vat + $total_input_tax + $service_charge + $exempt,
-        2
-    );
         if ($vat_rate == 0) {
         $taxable_net_vat = floatval($_POST['expense_taxable_net_vat']);
     } else {
         $taxable_net_vat = $total_purchases - $exempt;
         if ($taxable_net_vat < 0) $taxable_net_vat = 0;
     }
+    $total_input_tax = round($taxable_net_vat * ($vat_rate / 100), 2);
+    $total_receipt_amount = round(
+        $taxable_net_vat + $total_input_tax + $service_charge + $exempt,
+        2
+    );
 
     // Update query
     $query = "

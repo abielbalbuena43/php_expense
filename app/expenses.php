@@ -84,13 +84,13 @@ if (
 
     $deleteId = intval($_POST['delete_id']);
 
-    $ownerStmt = $conn->prepare("SELECT expense_user_id FROM expenses WHERE expense_id = ?");
+    $ownerStmt = $conn->prepare("SELECT expense_created_by FROM expenses WHERE expense_id = ?");
     $ownerStmt->bind_param("i", $deleteId);
     $ownerStmt->execute();
     $ownerRow = $ownerStmt->get_result()->fetch_assoc();
     $ownerStmt->close();
 
-    if (!$isAdmin && intval($ownerRow['expense_user_id']) !== intval($_SESSION['user_id'])) {
+    if (!$isAdmin && intval($ownerRow['expense_created_by']) !== intval($_SESSION['user_id'])) {
         setAlert('error', 'You are not authorized to delete this record.');
         header("Location: " . $_SERVER['PHP_SELF']);
         exit();
@@ -145,6 +145,7 @@ SELECT
     e.expense_or_number,
     e.expense_date,
     e.expense_total_receipt_amount,
+    e.expense_created_by,
     c.company_name,
     p.payee_name,
     cat.category_name
@@ -289,12 +290,10 @@ unset($_SESSION['alert']);
 <!-- Header Actions -->
 
 <div class="header-actions">
-    <?php if ($isAdmin): ?>
     <a href="expense_new.php" class="btn btn-success">
         <i class="icon-plus"></i>
         Create New Expense
     </a>
-    <?php endif; ?>
 </div>
 
 

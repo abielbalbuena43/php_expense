@@ -3,11 +3,16 @@ session_start();
 include "connection.php";
 include "header.php";
 
+
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-$isAdmin = $_SESSION['role'] === 'admin';
+if ($_SESSION['role'] !== 'admin') {
+    header("Location: dashboard.php");
+    exit();
+}
+$isAdmin = true;
 
 /* -------------------------------
    ALERT HELPER

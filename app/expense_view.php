@@ -4,6 +4,12 @@ session_start();
 include "header.php"; 
 include "connection.php";
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+$isAdmin = $_SESSION['role'] === 'admin';
+
 // Validate expense ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     echo "<div class='alert alert-danger'>Invalid Expense ID.</div>";

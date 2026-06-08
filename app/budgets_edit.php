@@ -4,6 +4,15 @@ session_start();
 include "header.php";
 include "connection.php";
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+if ($_SESSION['role'] !== 'admin') {
+    header("Location: budgets.php");
+    exit();
+}
+
 /* -------------------------------
    ALERT HELPER
 --------------------------------*/

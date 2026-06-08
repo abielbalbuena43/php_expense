@@ -1,5 +1,15 @@
 <?php
-include "connection.php";  // Your database connection
+session_start();
+include "connection.php";
+
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+if ($_SESSION['role'] !== 'admin') {
+    header("Location: dashboard.php");
+    exit();
+}
 
 // Get filters
 $selectedMonth = intval($_GET['month'] ?? date('m'));

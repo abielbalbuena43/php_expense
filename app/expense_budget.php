@@ -4,6 +4,15 @@ session_start();
 include "header.php";
 include "connection.php";
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+if ($_SESSION['role'] !== 'admin') {
+    header("Location: dashboard.php");
+    exit();
+}
+
 // Selected year
 $selectedYear = intval($_GET['year'] ?? date('Y'));
 

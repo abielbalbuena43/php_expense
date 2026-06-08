@@ -6,6 +6,14 @@ if (!isset($_GET['export'])) {
     include "header.php";  // UI only, not for Excel export
 }
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+if ($_SESSION['role'] !== 'admin') {
+    header("Location: dashboard.php");
+    exit();
+}
 
 // Fetch data for dropdowns
 $companiesQuery = "SELECT company_id, company_name FROM companies ORDER BY company_name ASC";

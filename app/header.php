@@ -17,6 +17,7 @@ include "connection.php";
 
 // Get username from session or default to Guest
 $username = isset($_SESSION['username']) ? $_SESSION['username'] : "Guest";
+$isAdmin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
 
 // Default user status
 $status = "Active"; 
@@ -549,6 +550,8 @@ $status = "Active";
             </a>
         </li>
 
+        <?php if ($isAdmin): ?>
+
         <li class="<?php echo ($current_page == 'budgets.php') ? 'active' : ''; ?>">
             <a href="budgets.php">
                 <i class="icon icon-money"></i>
@@ -601,7 +604,6 @@ $status = "Active";
                 <li class="<?php echo ($current_page == 'reports.php') ? 'active' : ''; ?>">
                     <a href="reports.php">Expense Reports</a>
                 </li>
-
                 <li class="<?php echo ($current_page == 'expense_budget.php') ? 'active' : ''; ?>">
                     <a href="expense_budget.php">Expense vs Budget</a>
                 </li>
@@ -614,22 +616,23 @@ $status = "Active";
                 <i class="icon icon-tags"></i>
                 <span>Special Fields</span>
             </a>
-
             <ul>
                 <li class="<?php echo ($current_page == 'resellers.php') ? 'active' : ''; ?>">
                     <a href="resellers.php">Resellers</a>
                 </li>
-
                 <li class="<?php echo ($current_page == 'end_users.php') ? 'active' : ''; ?>">
                     <a href="end_users.php">End Users</a>
                 </li>
-
                 <li class="<?php echo ($current_page == 'products.php') ? 'active' : ''; ?>">
                     <a href="products.php">Products</a>
                 </li>
             </ul>
         </li>
-    </ul>
+
+        <?php endif; ?>
+
+
+        </ul>
 
     <!-- Logout Button -->
 <div id="search">

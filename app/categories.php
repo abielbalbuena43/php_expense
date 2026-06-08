@@ -3,6 +3,16 @@ session_start();
 include "connection.php";
 include "header.php";
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+if ($_SESSION['role'] !== 'admin') {
+    header("Location: dashboard.php");
+    exit();
+}
+$isAdmin = true;
+
 /* -------------------------------
    FETCH CATEGORIES
 --------------------------------*/
@@ -71,10 +81,12 @@ $result = $conn->query($sql);
 
 <!-- Header Actions -->
 <div class="header-actions">
+    <?php if ($isAdmin): ?>
     <a href="categories_new.php" class="btn btn-success">
         <i class="icon-plus"></i>
         Create New Category
     </a>
+    <?php endif; ?>
 </div>
 
 <!-- Main Table -->

@@ -2,6 +2,15 @@
 session_start();
 include "header.php";
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+if ($_SESSION['role'] !== 'admin') {
+    header("Location: dashboard.php");
+    exit();
+}
+
 // ============================================
 // SECURITY CHECK - Must be logged in
 // ============================================

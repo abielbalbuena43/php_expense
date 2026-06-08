@@ -3,6 +3,15 @@ session_start();
 include "header.php";
 include "connection.php";
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+if ($_SESSION['role'] !== 'admin') {
+    header("Location: dashboard.php");
+    exit();
+}
+
 if (isset($_POST['submit_company'])) {
     $company_name = mysqli_real_escape_string($conn, trim($_POST['company_name']));
     $company_tin = mysqli_real_escape_string($conn, preg_replace('/\D+/', '', $_POST['company_tin'] ?? ''));

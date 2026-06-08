@@ -4,6 +4,11 @@ session_start();
 include "header.php"; 
 include "connection.php";
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
 // Fetch companies, payees, categories, resellers, end users, products
 $companies = mysqli_query($conn, "SELECT company_id, company_name, company_tin FROM companies ORDER BY company_name ASC");
 $payees = mysqli_query($conn, "
@@ -100,7 +105,8 @@ if (isset($_POST['submit_expense'])) {
             expense_total_receipt_amount,
             expense_taxable_net_vat,
             expense_remarks,
-            expense_created_at
+            expense_created_at,
+            expense_created_by
         ) VALUES (
             '$company_id',
             '$payee_id',
@@ -123,7 +129,8 @@ if (isset($_POST['submit_expense'])) {
             '$total_receipt_amount',
             '$taxable_net_vat',
             '$remarks',
-            NOW()
+            NOW(),
+            " . intval($_SESSION['user_id']) . "
         )
     ";
 
