@@ -8,7 +8,22 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-$isAdmin = $_SESSION['role'] === 'admin';
+$role = $_SESSION['role'];
+$isAdmin = $role === 'admin';
+$isSuperAdmin = $role === 'super_admin';
+
+// Fetch assigned companies for admin/user
+$assignedCompanyIds = [];
+if (!$isSuperAdmin) {
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+}
 
 // Check if an expense ID is provided
 if (!isset($_GET['id']) || empty($_GET['id'])) {
@@ -59,7 +74,16 @@ if (!$result || mysqli_num_rows($result) === 0) {
 
 $expense = mysqli_fetch_assoc($result);
 
-if (!$isAdmin && intval($expense['expense_created_by']) !== intval($_SESSION['user_id'])) {
+// Company scope guard
+if (!$isSuperAdmin) {
+    if (!in_array($expense['expense_company_id'], $assignedCompanyIds)) {
+        $_SESSION['alert'] = ['type' => 'error', 'message' => 'You are not authorized to delete this record.'];
+        header("Location: expenses.php");
+        exit();
+    }
+}
+
+if (!$isSuperAdmin && !$isAdmin && intval($expense['expense_created_by']) !== intval($_SESSION['user_id'])) {
     $_SESSION['alert'] = ['type' => 'error', 'message' => 'You are not authorized to delete this record.'];
     header("Location: expenses.php");
     exit();
@@ -84,6 +108,14 @@ if (isset($_POST['confirm_delete'])) {
 
 // Alert messages
 $alert = $_SESSION['alert'] ?? null;
+$alertType = 'info';
+$alertMessage = '';
+if (is_array($alert)) {
+    $alertType = $alert['type'] ?? 'info';
+    $alertMessage = $alert['message'] ?? '';
+} else {
+    $alertMessage = $alert ?? '';
+}
 unset($_SESSION['alert']);
 ?>
 
@@ -94,15 +126,11 @@ unset($_SESSION['alert']);
         <div class="row-fluid" style="background-color: white; min-height: 600px; padding: 20px;">
             <div class="span12">
 
-                <?php if ($alert == "Expense deleted successfully!") { ?>
-                    <div class="alert alert-success">Expense deleted successfully!</div>
-                <?php } elseif ($alert == "error") { ?>
-                    <div class="alert alert-danger">Error: Unable to delete expense.</div>
-                <?php } elseif ($alert == "invalid") { ?>
-                    <div class="alert alert-warning">Invalid expense ID.</div>
-                <?php } elseif ($alert == "not_found") { ?>
-                    <div class="alert alert-warning">Expense not found.</div>
-                <?php } ?>
+                <?php if ($alertMessage): ?>
+                <div class="alert alert-<?= $alertType === 'error' ? 'danger' : $alertType ?>">
+                    <?= htmlspecialchars($alertMessage) ?>
+                </div>
+                <?php endif; ?>
 
                 <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                     <div class="widget-title">

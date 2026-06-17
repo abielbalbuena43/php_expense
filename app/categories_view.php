@@ -8,11 +8,14 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+$role = $_SESSION['role'];
+$isSuperAdmin = $role === 'super_admin';
+$isAdmin = $role === 'admin';
+
+if (!$isSuperAdmin && !$isAdmin) {
     header("Location: dashboard.php");
     exit();
 }
-$isAdmin = true;
 
 // Validate category ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {
@@ -84,7 +87,7 @@ $category = mysqli_fetch_assoc($result);
 
                             <!-- Action Buttons -->
                             <div class="form-actions action-buttons">
-                                <?php if ($isAdmin): ?>
+                                <?php if ($isSuperAdmin || $isAdmin): ?>
                                 <a href="categories_edit.php?id=<?= $category['category_id'] ?>" class="btn btn-primary">Edit Category</a>
                                 <a href="categories_delete.php?id=<?= $category['category_id'] ?>" class="btn btn-danger">Delete Category</a>
                                 <?php endif; ?>

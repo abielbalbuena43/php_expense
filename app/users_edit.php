@@ -6,22 +6,11 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+if ($_SESSION['role'] !== 'super_admin') {
     header("Location: dashboard.php");
     exit();
 }
 
-// ============================================
-// SECURITY CHECK - Must be logged in
-// ============================================
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
-    header("Location: login.php");
-    exit();
-}
-
-// ============================================
-// ROLE DEFINITIONS
-// ============================================
 $current_role = $_SESSION['role'];
 $current_user_id = $_SESSION['user_id'];
 
@@ -37,13 +26,6 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 
 $edit_user_id = intval($_GET['id']);
 
-// ============================================
-// ACCESS CONTROL
-// ============================================
-// Admin can edit anyone, regular user can only edit themselves
-if ($current_role !== 'admin' && $current_user_id !== $edit_user_id) {
-    die("Access denied. You can only edit your own profile.");
-}
 
 /* ============================================
    ALERT HELPER
@@ -71,6 +53,17 @@ if ($result->num_rows === 0) {
 $user = $result->fetch_assoc();
 $stmt->close();
 
+// Fetch assigned companies
+$assignedCompanies = [];
+$acStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+$acStmt->bind_param("i", $edit_user_id);
+$acStmt->execute();
+$acResult = $acStmt->get_result();
+while ($acRow = $acResult->fetch_assoc()) {
+    $assignedCompanies[] = $acRow['company_id'];
+}
+$acStmt->close();
+
 // ============================================
 // HANDLE UPDATE FORM
 // ============================================
@@ -79,11 +72,6 @@ if (isset($_POST['update_user'])) {
     $fullname = trim($_POST['fullname']);
     $role = $_POST['role'];
     $password = $_POST['password'];
-
-    // Regular users cannot change their own role
-    if ($current_role !== 'admin') {
-        $role = 'user';
-    }
 
     // Build dynamic query based on password change
     if (!empty($password)) {
@@ -96,20 +84,31 @@ if (isset($_POST['update_user'])) {
     }
 
     if ($stmt->execute()) {
-        setAlert('success', 'User updated successfully!');
-        
-        // Update session if editing own profile
-        if ($current_user_id === $edit_user_id) {
-            $_SESSION['username'] = $username;
+        $stmt->close();
+
+        // Update company assignments
+        $deleteStmt = $conn->prepare("DELETE FROM user_companies WHERE user_id = ?");
+        $deleteStmt->bind_param("i", $edit_user_id);
+        $deleteStmt->execute();
+        $deleteStmt->close();
+
+        if (!empty($_POST['assigned_companies']) && $role !== 'super_admin') {
+            $companyStmt = $conn->prepare("INSERT INTO user_companies (user_id, company_id) VALUES (?, ?)");
+            foreach ($_POST['assigned_companies'] as $company_id) {
+                $company_id = intval($company_id);
+                $companyStmt->bind_param("ii", $edit_user_id, $company_id);
+                $companyStmt->execute();
+            }
+            $companyStmt->close();
         }
-        
+
+        setAlert('success', 'User updated successfully!');
         header("Location: users.php?success=edited");
         exit();
     } else {
         $error = "Error: Unable to update user. " . $stmt->error;
+        $stmt->close();
     }
-    
-    $stmt->close();
 }
 ?>
 
@@ -156,8 +155,7 @@ if (isset($_POST['update_user'])) {
                     <div class="widget-box" style="max-width: 800px; margin: 0 auto;">
                         <div class="widget-title">
                             <h5>
-                                <i class="fas fa-user-edit"></i> 
-                                <?= $current_role === 'admin' ? 'Edit User' : 'Edit My Profile' ?>
+                                <i class="fas fa-user-edit"></i> Edit User
                             </h5>
                         </div>
 
@@ -197,20 +195,34 @@ if (isset($_POST['update_user'])) {
                                     </div>
                                 </div>
 
-                                <!-- Role (Admin Only) -->
-                                <?php if ($current_role === 'admin'): ?>
-                                    <div class="control-group">
-                                        <label class="control-label">Role:</label>
-                                        <div class="controls">
-                                            <select name="role" class="span11" required>
-                                                <option value="admin" <?= $user['role'] == 'admin' ? 'selected' : '' ?>>Admin</option>
-                                                <option value="user" <?= $user['role'] == 'user' ? 'selected' : '' ?>>User</option>
-                                            </select>
-                                        </div>
+                                <!-- Role -->
+                                <div class="control-group">
+                                    <label class="control-label">Role:</label>
+                                    <div class="controls">
+                                        <select name="role" id="roleSelect" class="span11" required>
+                                            <option value="super_admin" <?= $user['role'] == 'super_admin' ? 'selected' : '' ?>>Super Admin</option>
+                                            <option value="admin" <?= $user['role'] == 'admin' ? 'selected' : '' ?>>Admin</option>
+                                            <option value="user" <?= $user['role'] == 'user' ? 'selected' : '' ?>>User</option>
+                                        </select>
                                     </div>
-                                <?php else: ?>
-                                    <input type="hidden" name="role" value="user">
-                                <?php endif; ?>
+                                </div>
+
+                                <!-- Company Assignment -->
+                                <div class="control-group">
+                                    <label class="control-label">Assign Companies:</label>
+                                    <div class="controls">
+                                        <?php
+                                        $companiesResult = $conn->query("SELECT company_id, company_name FROM companies ORDER BY company_name ASC");
+                                        while ($c = $companiesResult->fetch_assoc()):
+                                        $checked = in_array($c['company_id'], $assignedCompanies) ? 'checked' : '';
+                                        ?>
+                                        <label style="display:block; margin-bottom:5px;">
+                                            <input type="checkbox" name="assigned_companies[]" value="<?= $c['company_id'] ?>" <?= $checked ?>>
+                                            <?= htmlspecialchars($c['company_name']) ?>
+                                        </label>
+                                        <?php endwhile; ?>
+                                    </div>
+                                </div>
 
                                 <!-- Created At (Read Only) -->
                                 <div class="control-group">
@@ -236,6 +248,22 @@ if (isset($_POST['update_user'])) {
             </div>
         </div>
     </div>
+
+    <script>
+    document.getElementById('roleSelect').addEventListener('change', function() {
+        const companyDiv = document.querySelector('.control-group:has([name="assigned_companies[]"])');
+        if (companyDiv) {
+            companyDiv.style.display = this.value === 'super_admin' ? 'none' : 'block';
+        }
+    });
+
+    // Run on page load
+    const roleSelect = document.getElementById('roleSelect');
+    const companyDiv = document.querySelector('.control-group:has([name="assigned_companies[]"])');
+    if (companyDiv && roleSelect) {
+        companyDiv.style.display = roleSelect.value === 'super_admin' ? 'none' : 'block';
+    }
+    </script>
 
     <?php include "footer.php"; ?>
 </body>

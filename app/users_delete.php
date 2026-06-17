@@ -8,7 +8,7 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+if ($_SESSION['role'] !== 'super_admin') {
     header("Location: dashboard.php");
     exit();
 }
@@ -98,7 +98,7 @@ if (isset($_SESSION['alert'])) {
                             </tr>
                             <tr>
                                 <th>Role</th>
-                                <td><?= htmlspecialchars($user['role']) ?></td>
+                                <td><?= htmlspecialchars(ucfirst(str_replace('_', ' ', $user['role']))) ?></td>
                             </tr>
                             <tr>
                                 <th>Created At</th>
@@ -106,11 +106,13 @@ if (isset($_SESSION['alert'])) {
                             </tr>
                         </table>
 
+                        <form method="post">
                         <div class="form-actions action-buttons">
                             <button type="submit" name="confirm_delete" class="btn btn-danger">
                                 <i class="icon-trash"></i> Confirm Delete
                             </button>
                             <a href="users.php" class="btn btn-secondary">Cancel</a>
+                        </div>
                         </form>
                     </div>
                 </div>

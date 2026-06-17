@@ -8,7 +8,11 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+$role = $_SESSION['role'];
+$isSuperAdmin = $role === 'super_admin';
+$isAdmin = $role === 'admin';
+
+if (!$isSuperAdmin && !$isAdmin) {
     header("Location: dashboard.php");
     exit();
 }
@@ -105,6 +109,7 @@ if (isset($_SESSION['alert'])) {
                             </tr>
                         </table>
 
+                        <form action="" method="post">
                         <div class="form-actions action-buttons">
                             <button type="submit" name="confirm_delete" class="btn btn-danger">
                                 <i class="icon-trash"></i> Confirm Delete

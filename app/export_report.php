@@ -6,7 +6,11 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+$role = $_SESSION['role'];
+$isSuperAdmin = $role === 'super_admin';
+$isAdmin = $role === 'admin';
+
+if (!$isSuperAdmin && !$isAdmin) {
     header("Location: dashboard.php");
     exit();
 }
@@ -16,12 +20,39 @@ $selectedMonth = intval($_GET['month'] ?? date('m'));
 $selectedYear = intval($_GET['year'] ?? date('Y'));
 
 // Query data (same as before)
-$stmt = $conn->prepare("SELECT e.expense_id, e.expense_or_number, e.expense_date, e.expense_total_receipt_amount, c.company_name, cat.category_name
+// Fetch assigned companies for admin/user
+$assignedCompanyIds = [];
+if (!$isSuperAdmin) {
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+}
+
+$exportQuery = "SELECT e.expense_id, e.expense_or_number, e.expense_date, e.expense_total_receipt_amount, c.company_name, cat.category_name
     FROM expenses e
     JOIN companies c ON e.expense_company_id = c.company_id
     JOIN expense_categories cat ON e.expense_category_id = cat.category_id
-    WHERE MONTH(e.expense_date) = ? AND YEAR(e.expense_date) = ?");
-$stmt->bind_param("ii", $selectedMonth, $selectedYear);
+    WHERE MONTH(e.expense_date) = ? AND YEAR(e.expense_date) = ?";
+
+$exportParams = [$selectedMonth, $selectedYear];
+$exportTypes = "ii";
+
+if (!$isSuperAdmin && !empty($assignedCompanyIds)) {
+    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+    $exportQuery .= " AND e.expense_company_id IN ($placeholders)";
+    foreach ($assignedCompanyIds as $cid) {
+        $exportParams[] = $cid;
+        $exportTypes .= "i";
+    }
+}
+
+$stmt = $conn->prepare($exportQuery);
+$stmt->bind_param($exportTypes, ...$exportParams);
 $stmt->execute();
 $result = $stmt->get_result();
 $data = [];

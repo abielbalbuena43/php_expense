@@ -6,36 +6,14 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+if ($_SESSION['role'] !== 'super_admin') {
     header("Location: dashboard.php");
     exit();
 }
 
-// ============================================
-// SECURITY CHECK - Must be logged in
-// ============================================
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
-    header("Location: login.php");
-    exit();
-}
-
-// ============================================
-// ROLE DEFINITIONS
-// ============================================
 $current_role = $_SESSION['role'];
 $user_id = $_SESSION['user_id'];
-
-/* ============================================
-   PERMISSION HELPER
-============================================ */
-function hasPermission($role, $action) {
-    $permissions = [
-        'admin' => ['view_all', 'create', 'edit', 'delete'],
-        'user'  => ['view_own']
-    ];
-    
-    return isset($permissions[$role]) && in_array($action, $permissions[$role]);
-}
+$isSuperAdmin = $current_role === 'super_admin';
 
 /* ============================================
    ALERT HELPER
@@ -67,39 +45,18 @@ if (isset($_GET['success'])) {
 // ============================================
 include "connection.php";
 
-// ADMIN: See all users
-if ($current_role === 'admin') {
-    $sql = "
-        SELECT 
-            user_id,
-            username,
-            fullname,
-            role,
-            created_at
-        FROM users
-        ORDER BY created_at DESC
-    ";
-    $result = $conn->query($sql);
-    $is_admin_view = true;
-}
-// REGULAR USER: See only their own profile
-else {
-    $sql = "
-        SELECT 
-            user_id,
-            username,
-            fullname,
-            role,
-            created_at
-        FROM users
-        WHERE user_id = ?
-    ";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $is_admin_view = false;
-}
+$sql = "
+    SELECT 
+        user_id,
+        username,
+        fullname,
+        role,
+        created_at
+    FROM users
+    ORDER BY created_at DESC
+";
+$result = $conn->query($sql);
+$is_admin_view = true;
 ?>
 
 <!DOCTYPE html>
@@ -196,7 +153,7 @@ else {
                                         <td><?= htmlspecialchars($row['fullname']) ?></td>
                                         <td>
                                             <span class="badge badge-<?= $row['role'] ?>">
-                                                <?= htmlspecialchars(ucfirst($row['role'])) ?>
+                                                <?= htmlspecialchars(ucfirst(str_replace('_', ' ', $row['role']))) ?>
                                             </span>
                                         </td>
                                         <td><?= date('M d, Y H:i', strtotime($row['created_at'])) ?></td>

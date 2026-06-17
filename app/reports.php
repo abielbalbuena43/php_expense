@@ -10,14 +10,38 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+$role = $_SESSION['role'];
+$isSuperAdmin = $role === 'super_admin';
+$isAdmin = $role === 'admin';
+
+if (!$isSuperAdmin && !$isAdmin) {
     header("Location: dashboard.php");
     exit();
 }
 
+// Fetch assigned companies for admin/user
+$assignedCompanyIds = [];
+if (!$isSuperAdmin) {
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+}
+
 // Fetch data for dropdowns
-$companiesQuery = "SELECT company_id, company_name FROM companies ORDER BY company_name ASC";
-$companiesResult = mysqli_query($conn, $companiesQuery);
+if ($isSuperAdmin) {
+    $companiesResult = $conn->query("SELECT company_id, company_name FROM companies ORDER BY company_name ASC");
+} else {
+    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+    $compStmt = $conn->prepare("SELECT company_id, company_name FROM companies WHERE company_id IN ($placeholders) ORDER BY company_name ASC");
+    $compStmt->bind_param(str_repeat('i', count($assignedCompanyIds)), ...$assignedCompanyIds);
+    $compStmt->execute();
+    $companiesResult = $compStmt->get_result();
+}
 
 $categoriesQuery = "SELECT category_id, category_name FROM expense_categories ORDER BY category_name ASC";
 $categoriesResult = mysqli_query($conn, $categoriesQuery);
@@ -87,6 +111,15 @@ if (isset($_GET['export']) && $_GET['export'] == 1) {
         $query .= " AND e.expense_product_id = ?";
         $params[] = $product_id;
         $types .= "i";
+    }
+
+    if (!$isSuperAdmin && !empty($assignedCompanyIds)) {
+        $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+        $query .= " AND e.expense_company_id IN ($placeholders)";
+        foreach ($assignedCompanyIds as $cid) {
+            $params[] = $cid;
+            $types .= "i";
+        }
     }
 
     $query .= " ORDER BY e.expense_date DESC, e.expense_id DESC";
@@ -241,6 +274,15 @@ if ($product_id > 0) {
     $types .= "i";
 }
 
+if (!$isSuperAdmin && !empty($assignedCompanyIds)) {
+    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+    $query .= " AND e.expense_company_id IN ($placeholders)";
+    foreach ($assignedCompanyIds as $cid) {
+        $params[] = $cid;
+        $types .= "i";
+    }
+}
+
 $query .= " ORDER BY e.expense_date DESC, e.expense_id DESC";
 
 $stmt = $conn->prepare($query);
@@ -360,7 +402,7 @@ $reportTitle = "Expense Report from " . date('M d, Y', strtotime($start_date)) .
                                     <th>ID</th>
                                     <th>OR Number</th>
                                     <th>Date</th>
-                                    <th>Company</th><think>
+                                    <th>Company</th>
                                     <th>Payee</th>
                                     <th>Category</th>
                                     <th>Amount</th>

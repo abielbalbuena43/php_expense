@@ -17,7 +17,9 @@ include "connection.php";
 
 // Get username from session or default to Guest
 $username = isset($_SESSION['username']) ? $_SESSION['username'] : "Guest";
-$isAdmin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+$role = isset($_SESSION['role']) ? $_SESSION['role'] : '';
+$isAdmin = $role === 'admin';
+$isSuperAdmin = $role === 'super_admin';
 
 // Default user status
 $status = "Active"; 
@@ -404,39 +406,6 @@ $status = "Active";
             color: var(--text-white);
         }
 
-        /* ============================================
-           LOGOUT BUTTON
-           ============================================ */
-        #search {
-            margin: 20px;
-            padding: 10px;
-            background: #333;
-            border-radius: 8px;
-            border: 1px solid #444;
-        }
-
-        #search .btn-logout {
-            width: 100%;
-            background: linear-gradient(to right, var(--danger-color), #dc2626);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        #search .btn-logout:hover {
-            background: linear-gradient(to right, #dc2626, #b91c1c);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
-        }
 
         /* ============================================
            MAIN CONTENT AREA
@@ -510,8 +479,61 @@ $status = "Active";
     <a href="dashboard.php" class="logo">
         <i class="icon icon-bar-chart"></i> Expense Tracker
     </a>
-    <div class="user-info">
-        <i class="icon icon-user"></i> Welcome, <?php echo htmlspecialchars($username); ?>
+    <div class="user-info" id="profileToggle" style="cursor:pointer; position:relative;">
+        <i class="icon icon-user"></i>
+        <?php echo htmlspecialchars($username); ?>
+        <span style="font-size:10px; background:#4e54c8; color:white; padding:2px 7px; border-radius:10px; margin-left:6px; text-transform:uppercase; letter-spacing:0.5px;">
+            <?php echo $isSuperAdmin ? 'Super Admin' : ($isAdmin ? 'Admin' : 'User'); ?>
+        </span>
+        <i class="icon icon-caret-down" style="margin-left:6px; font-size:11px;"></i>
+
+        <div id="profileDropdown" style="
+            display:none;
+            position:absolute;
+            top:calc(100% + 10px);
+            right:0;
+            background:#1e1e21;
+            border:1px solid #444;
+            border-radius:8px;
+            min-width:180px;
+            box-shadow:0 8px 24px rgba(0,0,0,0.4);
+            z-index:2000;
+            overflow:hidden;
+        ">
+            <div style="padding:12px 16px; border-bottom:1px solid #333; color:#aaa; font-size:12px;">
+                Signed in as <strong style="color:white;"><?php echo htmlspecialchars($username); ?></strong>
+            </div>
+            <a href="change_password.php" style="
+                display:flex;
+                align-items:center;
+                gap:10px;
+                padding:12px 16px;
+                color:#ccc;
+                text-decoration:none;
+                font-size:13px;
+                transition:background 0.2s;
+            " onmouseover="this.style.background='#2a2a2e'" onmouseout="this.style.background='transparent'">
+                <i class="icon icon-lock"></i> Change Password
+            </a>
+            <form action="logout.php" method="post" style="margin:0;">
+                <button type="submit" style="
+                    width:100%;
+                    display:flex;
+                    align-items:center;
+                    gap:10px;
+                    padding:12px 16px;
+                    background:transparent;
+                    border:none;
+                    color:#ef4444;
+                    font-size:13px;
+                    cursor:pointer;
+                    text-align:left;
+                    transition:background 0.2s;
+                " onmouseover="this.style.background='#2a2a2e'" onmouseout="this.style.background='transparent'">
+                    <i class="icon icon-share-alt"></i> Log Out
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -550,7 +572,7 @@ $status = "Active";
             </a>
         </li>
 
-        <?php if ($isAdmin): ?>
+        <?php if ($isAdmin || $isSuperAdmin): ?>
 
         <li class="<?php echo ($current_page == 'budgets.php') ? 'active' : ''; ?>">
             <a href="budgets.php">
@@ -580,12 +602,14 @@ $status = "Active";
             </a>
         </li>
 
+        <?php if ($isSuperAdmin): ?>
         <li class="<?php echo ($current_page == 'users.php') ? 'active' : ''; ?>">
             <a href="users.php">
                 <i class="icon icon-user"></i>
                 <span>Users</span>
             </a>
         </li>
+        <?php endif; ?>
 
         <li class="<?php echo ($current_page == 'logs.php') ? 'active' : ''; ?>">
             <a href="logs.php">
@@ -634,14 +658,7 @@ $status = "Active";
 
         </ul>
 
-    <!-- Logout Button -->
-<div id="search">
-    <form action="logout.php" method="post">
-        <button type="submit" class="btn-logout">
-            <i class="icon icon-share-alt"></i> Log Out
-        </button>
-    </form>
-</div>
+    <!-- removed: logout moved to profile dropdown -->
 </div>
 
 <script>
@@ -665,6 +682,24 @@ document.addEventListener('DOMContentLoaded', function() {
             document.body.classList.remove('sidebar-open');
         }
     });
+
+    // Profile dropdown toggle
+    const profileToggle = document.getElementById('profileToggle');
+    const profileDropdown = document.getElementById('profileDropdown');
+
+    if (profileToggle && profileDropdown) {
+        profileToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isVisible = profileDropdown.style.display === 'block';
+            profileDropdown.style.display = isVisible ? 'none' : 'block';
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!profileToggle.contains(e.target)) {
+                profileDropdown.style.display = 'none';
+            }
+        });
+    }
 
     // Dropdown toggle logic
     const submenuLinks = document.querySelectorAll('#sidebar .submenu > a');

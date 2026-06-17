@@ -545,9 +545,9 @@ tr:hover .amount-col {
 
 /* SUCCESS (GREEN) */
 .alert-success {
-    background: #d1fae5;         /* slightly stronger green */
-    color: #065f46;
-    border-color: #10b981;
+    background: #d1fae5 !important;
+    color: #065f46 !important;
+    border-color: #10b981 !important;
 }
 
 /* ERROR (RED) */
@@ -555,6 +555,13 @@ tr:hover .amount-col {
     background: #fee2e2;
     color: #7f1d1d;
     border-color: #ef4444;
+}
+
+/* DANGER (alias for alert-error) */
+.alert-danger {
+    background: #fee2e2 !important;
+    color: #7f1d1d !important;
+    border-color: #ef4444 !important;
 }
 
 /* ==========================================

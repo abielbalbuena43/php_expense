@@ -8,11 +8,14 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+$role = $_SESSION['role'];
+$isSuperAdmin = $role === 'super_admin';
+$isAdmin = $role === 'admin';
+
+if (!$isSuperAdmin && !$isAdmin) {
     header("Location: dashboard.php");
     exit();
 }
-$isAdmin = true;
 
 /* -------------------------------
    ALERT HELPER
@@ -165,12 +168,12 @@ unset($_SESSION['alert']);
 
 <!-- Header Actions -->
 <div class="header-actions">
-    <?php if ($isAdmin): ?>
+    <?php if ($isSuperAdmin || $isAdmin): ?>
     <a href="budgets_new.php" class="btn btn-success">
         <i class="icon-plus"></i>
         Create New Budget
     </a>
-    <?php endif; ?>
+<?php endif; ?>
 </div>
 
 

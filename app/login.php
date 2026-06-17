@@ -9,7 +9,7 @@ include "../app/connection.php";
 if (isset($_POST['login'])) {
 
     $username = mysqli_real_escape_string($conn, $_POST['username']);
-    $password = mysqli_real_escape_string($conn, $_POST['password']);
+    $password = $_POST['password'];
 
     $query = "SELECT * FROM users WHERE username = '$username'";
     $result = mysqli_query($conn, $query);
@@ -18,8 +18,9 @@ if (isset($_POST['login'])) {
 
         $user = mysqli_fetch_assoc($result);
 
-        // Ideally, use password_verify() for hashed passwords
-        if ($user['password'] === $password) {
+        // Support both hashed and plaintext passwords
+        $isHashed = strlen($user['password']) > 30 && str_starts_with($user['password'], '$2y$');
+        if ($isHashed ? password_verify($password, $user['password']) : $user['password'] === $password) {
 
             $_SESSION['user_id'] = $user['user_id'];
             $_SESSION['username'] = $user['username'];

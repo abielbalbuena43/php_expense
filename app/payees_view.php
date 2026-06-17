@@ -8,7 +8,11 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+$role = $_SESSION['role'];
+$isSuperAdmin = $role === 'super_admin';
+$isAdmin = $role === 'admin';
+
+if (!$isSuperAdmin && !$isAdmin) {
     header("Location: dashboard.php");
     exit();
 }
@@ -119,8 +123,10 @@ $payee = mysqli_fetch_assoc($result);
 
                             <!-- Action Buttons -->
                             <div class="form-actions action-buttons">
+                                <?php if ($isSuperAdmin || $isAdmin): ?>
                                 <a href="payees_edit.php?id=<?= $payee['payee_id'] ?>" class="btn btn-primary">Edit Payee</a>
                                 <a href="payees_delete.php?id=<?= $payee['payee_id'] ?>" class="btn btn-danger">Delete Payee</a>
+                                <?php endif; ?>
                                 <a href="payees.php" class="btn btn-secondary">Back</a>
                             </div>
 

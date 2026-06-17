@@ -7,7 +7,11 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+$role = $_SESSION['role'];
+$isSuperAdmin = $role === 'super_admin';
+$isAdmin = $role === 'admin';
+
+if (!$isSuperAdmin && !$isAdmin) {
     header("Location: dashboard.php");
     exit();
 }
@@ -117,10 +121,12 @@ unset($_SESSION['alert']);
 
 <div class="header-actions">
 
-<a href="payees_new.php" class="btn btn-success" >
+<?php if ($isSuperAdmin || $isAdmin): ?>
+<a href="payees_new.php" class="btn btn-success">
 <i class="icon-plus"></i>
 Create New Payee
 </a>
+<?php endif; ?>
 
 </div>
 

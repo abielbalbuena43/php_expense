@@ -7,7 +7,11 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+$role = $_SESSION['role'];
+$isSuperAdmin = $role === 'super_admin';
+$isAdmin = $role === 'admin';
+
+if (!$isSuperAdmin && !$isAdmin) {
     header("Location: budgets.php");
     exit();
 }
@@ -32,6 +36,12 @@ if (!isset($_SESSION['csrf_token'])) {
 /* -------------------------------
    HANDLE FORM SUBMISSION
 --------------------------------*/
+$monthsArr = [
+    1=>"January",2=>"February",3=>"March",4=>"April",
+    5=>"May",6=>"June",7=>"July",8=>"August",
+    9=>"September",10=>"October",11=>"November",12=>"December"
+];
+
 if (isset($_POST['submit_budget'])) {
 
     $month = intval($_POST['month']);
@@ -48,7 +58,7 @@ if (isset($_POST['submit_budget'])) {
 
     if ($count > 0) {
 
-        setAlert('error', 'A budget for this period already exists.');
+        setAlert('error', 'A budget for ' . $monthsArr[$month] . ' ' . $year . ' already exists.');
 
     } else {
 
@@ -100,7 +110,7 @@ if (isset($_POST['submit_budget'])) {
                 unset($_SESSION['alert']);
                 ?>
 
-                <div class="alert alert-<?= $type ?>">
+                <div class="alert alert-<?= $type === 'error' ? 'danger' : $type ?>">
                     <?= htmlspecialchars($message) ?>
                 </div>
 

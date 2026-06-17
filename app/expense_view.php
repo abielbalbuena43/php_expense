@@ -8,7 +8,22 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-$isAdmin = $_SESSION['role'] === 'admin';
+$role = $_SESSION['role'];
+$isAdmin = $role === 'admin';
+$isSuperAdmin = $role === 'super_admin';
+
+// Fetch assigned companies for admin/user
+$assignedCompanyIds = [];
+if (!$isSuperAdmin) {
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+}
 
 // Validate expense ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {
@@ -20,7 +35,8 @@ $expense_id = intval($_GET['id']);
 
 // Fetch expense details
 $query = "
-    SELECT e.*, 
+    SELECT e.*,
+           e.expense_created_by,
            c.company_name,
            c.company_tin,
            p.payee_name, 
@@ -46,6 +62,15 @@ if (!$result || mysqli_num_rows($result) == 0) {
 }
 
 $expense = mysqli_fetch_assoc($result);
+
+// Company scope guard
+if (!$isSuperAdmin) {
+    if (!in_array($expense['expense_company_id'], $assignedCompanyIds)) {
+        $_SESSION['alert'] = ['type' => 'error', 'message' => 'You are not authorized to view this record.'];
+        header("Location: expenses.php");
+        exit();
+    }
+}
 ?>
 
 <link rel="stylesheet" href="css/layout.css" />
@@ -216,7 +241,7 @@ $expense = mysqli_fetch_assoc($result);
 
                             <!-- Total Input Tax -->
                             <div class="control-group">
-                                <label class="control-label">Total Input Tax (12%):</label>
+                                <label class="control-label">Total Input Tax:</label>
                                 <div class="controls">
                                     <input type="text" class="span11" value="<?= number_format($expense['expense_total_input_tax'], 2) ?>" disabled>
                                 </div>
@@ -250,8 +275,10 @@ $expense = mysqli_fetch_assoc($result);
 
                             <!-- Action Buttons -->
                             <div class="form-actions action-buttons">
+                                <?php if ($isSuperAdmin || $isAdmin || intval($expense['expense_created_by']) === intval($_SESSION['user_id'])): ?>
                                 <a href="expense_edit.php?id=<?= $expense['expense_id'] ?>" class="btn btn-primary">Edit Expense</a>
                                 <a href="expense_delete.php?id=<?= $expense['expense_id'] ?>" class="btn btn-danger">Delete Expense</a>
+                                <?php endif; ?>
                                 <a href="expenses.php" class="btn btn-secondary">Back</a>
                             </div>
 

@@ -7,11 +7,14 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+$role = $_SESSION['role'];
+$isSuperAdmin = $role === 'super_admin';
+$isAdmin = $role === 'admin';
+
+if (!$isSuperAdmin && !$isAdmin) {
     header("Location: dashboard.php");
     exit();
 }
-$isAdmin = true;
 
 /* -------------------------------
    FETCH CATEGORIES
@@ -81,12 +84,12 @@ $result = $conn->query($sql);
 
 <!-- Header Actions -->
 <div class="header-actions">
-    <?php if ($isAdmin): ?>
+    <?php if ($isSuperAdmin || $isAdmin): ?>
     <a href="categories_new.php" class="btn btn-success">
         <i class="icon-plus"></i>
         Create New Category
     </a>
-    <?php endif; ?>
+<?php endif; ?>
 </div>
 
 <!-- Main Table -->

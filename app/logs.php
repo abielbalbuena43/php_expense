@@ -4,6 +4,19 @@ session_start();
 include "header.php";
 include "connection.php";
 
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
+$role = $_SESSION['role'];
+$isSuperAdmin = $role === 'super_admin';
+$isAdmin = $role === 'admin';
+
+if (!$isSuperAdmin && !$isAdmin) {
+    header("Location: dashboard.php");
+    exit();
+}
+
 // Pagination variables
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $recordsPerPage = 20;

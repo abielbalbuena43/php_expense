@@ -9,8 +9,54 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+$role = $_SESSION['role'];
+$isAdmin = $role === 'admin';
+$isSuperAdmin = $role === 'super_admin';
+
+// Fetch assigned companies based on role
+$assignedCompanyIds = [];
+if (!$isSuperAdmin) {
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+}
+
+// Fetch companies scoped by role
+if ($isSuperAdmin) {
+    $companiesResult = $conn->query("SELECT company_id, company_name, company_tin FROM companies ORDER BY company_name ASC");
+} else {
+    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+    $compStmt = $conn->prepare("SELECT company_id, company_name, company_tin FROM companies WHERE company_id IN ($placeholders) ORDER BY company_name ASC");
+    $compStmt->bind_param(str_repeat('i', count($assignedCompanyIds)), ...$assignedCompanyIds);
+    $compStmt->execute();
+    $companiesResult = $compStmt->get_result();
+}
+
+// Collect into array for prefill logic
+$companyRows = [];
+while ($row = $companiesResult->fetch_assoc()) {
+    $companyRows[] = $row;
+}
+$preselectedCompany = count($companyRows) === 1 ? $companyRows[0]['company_id'] : null;
+
 // Fetch companies, payees, categories, resellers, end users, products
-$companies = mysqli_query($conn, "SELECT company_id, company_name, company_tin FROM companies ORDER BY company_name ASC");
+$payees = mysqli_query($conn, "
+    SELECT 
+        payee_id, 
+        payee_name, 
+        payee_tin,
+        payee_address1,
+        payee_address2,
+        payee_category
+    FROM payees 
+    ORDER BY payee_name ASC
+");
+
 $payees = mysqli_query($conn, "
     SELECT 
         payee_id, 
@@ -179,15 +225,18 @@ unset($_SESSION['alert']);
                                 <label class="control-label">Company:</label>
                                 <div class="controls" style="position:relative;">
                                     <select name="expense_company_id" id="companySelect" class="span11" required>
+                                        <?php if (!$preselectedCompany): ?>
                                         <option value="" disabled selected>Select Company</option>
-                                        <?php while ($row = mysqli_fetch_assoc($companies)) { ?>
-                                            <option 
-                                                value="<?= $row['company_id'] ?>" 
+                                        <?php endif; ?>
+                                        <?php foreach ($companyRows as $row): ?>
+                                            <option
+                                                value="<?= $row['company_id'] ?>"
                                                 data-tin="<?= htmlspecialchars($row['company_tin']) ?>"
+                                                <?= $preselectedCompany == $row['company_id'] ? 'selected' : '' ?>
                                             >
                                                 <?= htmlspecialchars($row['company_name']) ?>
                                             </option>
-                                        <?php } ?>
+                                        <?php endforeach; ?>
                                     </select>
                                 </div>
                             </div>
@@ -614,12 +663,19 @@ document.addEventListener('DOMContentLoaded', function () {
     // Allow manual category by default
     categorySelect.removeAttribute('disabled');
 
-    // Auto-display company TIN
-    document.getElementById('companySelect').addEventListener('change', function() {
+    // Auto-display company TIN on change
+    const companySelect = document.getElementById('companySelect');
+    companySelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         const tin = selectedOption.getAttribute('data-tin') || '';
         document.getElementById('companyTin').value = tin;
     });
+
+    // Prefill TIN on page load if company is preselected
+    const preselected = companySelect.options[companySelect.selectedIndex];
+    if (preselected && preselected.value) {
+        document.getElementById('companyTin').value = preselected.getAttribute('data-tin') || '';
+    }
 
 
     // Ensure category is submitted

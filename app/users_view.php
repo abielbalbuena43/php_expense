@@ -8,7 +8,7 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+if ($_SESSION['role'] !== 'super_admin') {
     header("Location: dashboard.php");
     exit();
 }
@@ -74,7 +74,7 @@ $user = mysqli_fetch_assoc($result);
                             <div class="control-group">
                                 <label class="control-label">Role:</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" value="<?= htmlspecialchars($user['role']) ?>" disabled>
+                                    <input type="text" class="span11" value="<?= htmlspecialchars(ucfirst(str_replace('_', ' ', $user['role']))) ?>" disabled>
                                 </div>
                             </div>
 

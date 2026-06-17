@@ -7,7 +7,34 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-$isAdmin = $_SESSION['role'] === 'admin';
+$role = $_SESSION['role'];
+$isAdmin = $role === 'admin';
+$isSuperAdmin = $role === 'super_admin';
+
+// Fetch assigned companies for admin/user
+$assignedCompanyIds = [];
+if (!$isSuperAdmin) {
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+}
+
+/* -------------------------------
+   PAGINATION
+--------------------------------*/
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$recordsPerPage = 20;
+$offset = ($page - 1) * $recordsPerPage;
+
+/* -------------------------------
+   SEARCH
+--------------------------------*/
+$searchQuery = trim($_GET['search'] ?? '');
 
 /* -------------------------------
    ALERT HELPER
@@ -137,6 +164,82 @@ if (!isset($_SESSION['csrf_token'])) {
 }
 
 /* -------------------------------
+   TOTAL COUNT FOR PAGINATION
+--------------------------------*/
+$countSql = "
+    SELECT COUNT(*) as total
+    FROM expenses e
+    INNER JOIN companies c ON e.expense_company_id = c.company_id
+    INNER JOIN payees p ON e.expense_payee_id = p.payee_id
+    INNER JOIN expense_categories cat ON e.expense_category_id = cat.category_id
+";
+
+$countParams = [];
+$countTypes = "";
+$countWhereClauses = [];
+
+if (!empty($selectedPeriods)) {
+    $conditions = [];
+    foreach ($selectedPeriods as $p) {
+        $conditions[] = "(MONTH(e.expense_date) = ? AND YEAR(e.expense_date) = ?)";
+        $countParams[] = $p['month'];
+        $countParams[] = $p['year'];
+        $countTypes .= "ii";
+    }
+    $countWhereClauses[] = "(" . implode(" OR ", $conditions) . ")";
+}
+
+if ($selectedDateFrom && $selectedDateTo) {
+    $countWhereClauses[] = "DATE(e.expense_date) BETWEEN ? AND ?";
+    $countParams[] = $selectedDateFrom;
+    $countParams[] = $selectedDateTo;
+    $countTypes .= "ss";
+} elseif ($selectedDateFrom) {
+    $countWhereClauses[] = "DATE(e.expense_date) >= ?";
+    $countParams[] = $selectedDateFrom;
+    $countTypes .= "s";
+} elseif ($selectedDateTo) {
+    $countWhereClauses[] = "DATE(e.expense_date) <= ?";
+    $countParams[] = $selectedDateTo;
+    $countTypes .= "s";
+}
+
+if (!empty($searchQuery)) {
+    $countWhereClauses[] = "(e.expense_or_number LIKE ? OR c.company_name LIKE ? OR p.payee_name LIKE ? OR cat.category_name LIKE ?)";
+    $searchParam = "%" . $searchQuery . "%";
+    $countParams[] = $searchParam;
+    $countParams[] = $searchParam;
+    $countParams[] = $searchParam;
+    $countParams[] = $searchParam;
+    $countTypes .= "ssss";
+}
+
+if (!$isSuperAdmin && !empty($assignedCompanyIds)) {
+    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+    $countWhereClauses[] = "e.expense_company_id IN ($placeholders)";
+    foreach ($assignedCompanyIds as $cid) {
+        $countParams[] = $cid;
+        $countTypes .= "i";
+    }
+}
+
+if (!empty($countWhereClauses)) {
+    $countSql .= " WHERE " . implode(" AND ", $countWhereClauses);
+}
+
+$countStmt = $conn->prepare($countSql);
+if (!empty($countParams)) {
+    $countStmt->bind_param($countTypes, ...$countParams);
+}
+$countStmt->execute();
+$countResult = $countStmt->get_result();
+$countRow = $countResult->fetch_assoc();
+$totalRecords = $countRow['total'];
+$countStmt->close();
+
+$totalPages = ceil($totalRecords / $recordsPerPage);
+
+/* -------------------------------
    SQL QUERY
 --------------------------------*/
 $sql = "
@@ -188,11 +291,34 @@ if ($selectedDateFrom && $selectedDateTo) {
     $types .= "s";
 }
 
+if (!empty($searchQuery)) {
+    $whereClauses[] = "(e.expense_or_number LIKE ? OR c.company_name LIKE ? OR p.payee_name LIKE ? OR cat.category_name LIKE ?)";
+    $searchParam = "%" . $searchQuery . "%";
+    $params[] = $searchParam;
+    $params[] = $searchParam;
+    $params[] = $searchParam;
+    $params[] = $searchParam;
+    $types .= "ssss";
+}
+
+if (!$isSuperAdmin && !empty($assignedCompanyIds)) {
+    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+    $whereClauses[] = "e.expense_company_id IN ($placeholders)";
+    foreach ($assignedCompanyIds as $cid) {
+        $params[] = $cid;
+        $types .= "i";
+    }
+}
+
 if (!empty($whereClauses)) {
     $sql .= " WHERE " . implode(" AND ", $whereClauses);
 }
 
-$sql .= " ORDER BY e.expense_date DESC, e.expense_id DESC LIMIT 100";
+$sql .= " ORDER BY e.expense_date DESC, e.expense_id DESC LIMIT ? OFFSET ?";
+
+$params[] = $recordsPerPage;
+$params[] = $offset;
+$types .= "ii";
 
 $stmt = $conn->prepare($sql);
 
@@ -443,7 +569,6 @@ Clear Date Range
 
 </div>
 
-
 <!-- Main Table -->
 
 <div class="table-container">
@@ -455,10 +580,44 @@ Expenses List (<?= htmlspecialchars($filterLabel) ?>)
 </h3>
 
 <span class="table-stats">
-Showing <?= $result->num_rows ?? 0 ?> records
+    Showing <?= min($offset + 1, $totalRecords) ?> to <?= min($offset + $recordsPerPage, $totalRecords) ?> of <?= number_format($totalRecords) ?> records
 </span>
 
 </div>
+
+<!-- Search Bar -->
+<form method="get" id="searchForm" style="margin-bottom: 15px;">
+
+    <?php if (!empty($selectedPeriods)): ?>
+    <?php foreach ($selectedPeriods as $p): ?>
+    <input type="hidden" name="month[]" value="<?= (int)$p['month'] ?>">
+    <input type="hidden" name="year[]" value="<?= (int)$p['year'] ?>">
+    <?php endforeach; ?>
+    <?php endif; ?>
+
+    <?php if ($selectedDateFrom): ?>
+    <input type="hidden" name="date_from" value="<?= htmlspecialchars($selectedDateFrom) ?>">
+    <?php endif; ?>
+
+    <?php if ($selectedDateTo): ?>
+    <input type="hidden" name="date_to" value="<?= htmlspecialchars($selectedDateTo) ?>">
+    <?php endif; ?>
+
+    <div style="display:flex; gap:10px; align-items:center; max-width:500px;">
+        <input
+            type="text"
+            name="search"
+            value="<?= htmlspecialchars($searchQuery) ?>"
+            placeholder="Search OR Number, Company, Payee, Category..."
+            style="flex:1; padding:15px 12px; border:1px solid #ccc; border-radius:3px; font-family:inherit; font-size:14px;"
+        >
+        <button type="submit" class="btn btn-primary">Search</button>
+        <?php if (!empty($searchQuery)): ?>
+        <a href="<?= '?' . http_build_query(array_merge($_GET, ['search' => ''])) ?>" class="btn btn-secondary">Clear</a>
+        <?php endif; ?>
+    </div>
+
+</form>
 
 
 <div class="table-responsive">
@@ -529,6 +688,52 @@ Try adjusting the date range or create a new expense.
 </tbody>
 
 </table>
+
+</div>
+
+<?php
+// Build base URL preserving existing filters
+$paginationParams = $_GET;
+unset($paginationParams['page']);
+$baseUrl = '?' . http_build_query($paginationParams);
+$baseUrl .= $paginationParams ? '&' : '';
+?>
+
+<?php if ($totalPages > 1): ?>
+<div class="table-footer">
+    <div class="pagination-wrapper">
+        <ul class="pagination">
+            <?php if ($page > 1): ?>
+                <li><a href="<?= $baseUrl ?>page=<?= $page - 1 ?>" class="pagination-prev">« Previous</a></li>
+            <?php endif; ?>
+
+            <?php
+            $startPage = max(1, $page - 2);
+            $endPage = min($totalPages, $page + 2);
+
+            if ($startPage > 1) {
+                echo '<li><a href="' . $baseUrl . 'page=1">1</a></li>';
+                if ($startPage > 2) echo '<li class="disabled"><span>...</span></li>';
+            }
+
+            for ($i = $startPage; $i <= $endPage; $i++) {
+                $activeClass = $i == $page ? 'active' : '';
+                echo '<li class="' . $activeClass . '"><a href="' . $baseUrl . 'page=' . $i . '">' . $i . '</a></li>';
+            }
+
+            if ($endPage < $totalPages) {
+                if ($endPage < $totalPages - 1) echo '<li class="disabled"><span>...</span></li>';
+                echo '<li><a href="' . $baseUrl . 'page=' . $totalPages . '">' . $totalPages . '</a></li>';
+            }
+            ?>
+
+            <?php if ($page < $totalPages): ?>
+                <li><a href="<?= $baseUrl ?>page=<?= $page + 1 ?>" class="pagination-next">Next »</a></li>
+            <?php endif; ?>
+        </ul>
+    </div>
+</div>
+<?php endif; ?>
 
 </div>
 

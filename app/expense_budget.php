@@ -8,23 +8,55 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+$role = $_SESSION['role'];
+$isSuperAdmin = $role === 'super_admin';
+$isAdmin = $role === 'admin';
+
+if (!$isSuperAdmin && !$isAdmin) {
     header("Location: dashboard.php");
     exit();
+}
+
+// Fetch assigned companies for admin/user
+$assignedCompanyIds = [];
+if (!$isSuperAdmin) {
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
 }
 
 // Selected year
 $selectedYear = intval($_GET['year'] ?? date('Y'));
 
 // ---------- Monthly Expenses ----------
-$expenseStmt = $conn->prepare("
-    SELECT MONTH(expense_date) AS month,
-           SUM(expense_total_receipt_amount) AS total
-    FROM expenses
-    WHERE YEAR(expense_date) = ?
-    GROUP BY MONTH(expense_date)
-");
-$expenseStmt->bind_param("i", $selectedYear);
+if ($isSuperAdmin || empty($assignedCompanyIds)) {
+    $expenseStmt = $conn->prepare("
+        SELECT MONTH(expense_date) AS month,
+               SUM(expense_total_receipt_amount) AS total
+        FROM expenses
+        WHERE YEAR(expense_date) = ?
+        GROUP BY MONTH(expense_date)
+    ");
+    $expenseStmt->bind_param("i", $selectedYear);
+} else {
+    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+    $expenseStmt = $conn->prepare("
+        SELECT MONTH(expense_date) AS month,
+               SUM(expense_total_receipt_amount) AS total
+        FROM expenses
+        WHERE YEAR(expense_date) = ?
+        AND expense_company_id IN ($placeholders)
+        GROUP BY MONTH(expense_date)
+    ");
+    $expenseParams = array_merge([$selectedYear], $assignedCompanyIds);
+    $expenseTypes = 'i' . str_repeat('i', count($assignedCompanyIds));
+    $expenseStmt->bind_param($expenseTypes, ...$expenseParams);
+}
 $expenseStmt->execute();
 $expenseResult = $expenseStmt->get_result();
 

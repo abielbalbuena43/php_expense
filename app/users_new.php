@@ -6,24 +6,9 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if ($_SESSION['role'] !== 'admin') {
+if ($_SESSION['role'] !== 'super_admin') {
     header("Location: dashboard.php");
     exit();
-}
-
-// ============================================
-// SECURITY CHECK - Must be logged in
-// ============================================
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
-    header("Location: login.php");
-    exit();
-}
-
-// ============================================
-// ACCESS CONTROL - Only admins can create users
-// ============================================
-if ($_SESSION['role'] !== 'admin') {
-    die("Access denied. Admins only.");
 }
 
 /* ============================================
@@ -64,6 +49,19 @@ if (isset($_POST['submit_user'])) {
     $stmt->bind_param("ssss", $username, $hashed_password, $fullname, $role);
 
     if ($stmt->execute()) {
+        $new_user_id = $stmt->insert_id;
+
+        // Save company assignments for admin and user roles
+        if (!empty($_POST['assigned_companies']) && $role !== 'super_admin') {
+            $companyStmt = $conn->prepare("INSERT INTO user_companies (user_id, company_id) VALUES (?, ?)");
+            foreach ($_POST['assigned_companies'] as $company_id) {
+                $company_id = intval($company_id);
+                $companyStmt->bind_param("ii", $new_user_id, $company_id);
+                $companyStmt->execute();
+            }
+            $companyStmt->close();
+        }
+
         setAlert('success', 'User added successfully!');
         header("Location: users.php?success=added");
         exit();
@@ -153,10 +151,27 @@ if (isset($_POST['submit_user'])) {
                                 <div class="control-group">
                                     <label class="control-label">Role:</label>
                                     <div class="controls">
-                                        <select name="role" class="span11" required>
-                                            <option value="admin">Admin</option>
+                                        <select name="role" id="roleSelect" class="span11" required>
+                                            <option value="super_admin">Super Admin</option>
+                                            <option value="admin" selected>Admin</option>
                                             <option value="user">User</option>
                                         </select>
+                                    </div>
+                                </div>
+
+                                <!-- Company Assignment -->
+                                <div class="control-group" id="companyAssignment">
+                                    <label class="control-label">Assign Companies:</label>
+                                    <div class="controls">
+                                        <?php
+                                        $companiesResult = $conn->query("SELECT company_id, company_name FROM companies ORDER BY company_name ASC");
+                                        while ($c = $companiesResult->fetch_assoc()):
+                                        ?>
+                                        <label style="display:block; margin-bottom:5px;">
+                                            <input type="checkbox" name="assigned_companies[]" value="<?= $c['company_id'] ?>">
+                                            <?= htmlspecialchars($c['company_name']) ?>
+                                        </label>
+                                        <?php endwhile; ?>
                                     </div>
                                 </div>
 
@@ -174,6 +189,19 @@ if (isset($_POST['submit_user'])) {
             </div>
         </div>
     </div>
+
+    <script>
+    function toggleCompanySection() {
+        const role = document.getElementById('roleSelect').value;
+        const companyDiv = document.getElementById('companyAssignment');
+        if (companyDiv) {
+            companyDiv.style.display = role === 'super_admin' ? 'none' : 'block';
+        }
+    }
+
+    document.getElementById('roleSelect').addEventListener('change', toggleCompanySection);
+    toggleCompanySection();
+    </script>
 
     <?php include "footer.php"; ?>
 </body>

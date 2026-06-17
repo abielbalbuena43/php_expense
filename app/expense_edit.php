@@ -8,7 +8,22 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-$isAdmin = $_SESSION['role'] === 'admin';
+$role = $_SESSION['role'];
+$isAdmin = $role === 'admin';
+$isSuperAdmin = $role === 'super_admin';
+
+// Fetch assigned companies for admin/user
+$assignedCompanyIds = [];
+if (!$isSuperAdmin) {
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+}
 
 // Validate ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {
@@ -19,7 +34,20 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 $expense_id = intval($_GET['id']);
 
 // Fetch dropdown data
-$companies = mysqli_query($conn, "SELECT company_id, company_name FROM companies ORDER BY company_name ASC");
+if ($isSuperAdmin) {
+    $companiesResult = $conn->query("SELECT company_id, company_name, company_tin FROM companies ORDER BY company_name ASC");
+} else {
+    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+    $compStmt = $conn->prepare("SELECT company_id, company_name, company_tin FROM companies WHERE company_id IN ($placeholders) ORDER BY company_name ASC");
+    $compStmt->bind_param(str_repeat('i', count($assignedCompanyIds)), ...$assignedCompanyIds);
+    $compStmt->execute();
+    $companiesResult = $compStmt->get_result();
+}
+
+$companyRows = [];
+while ($row = $companiesResult->fetch_assoc()) {
+    $companyRows[] = $row;
+}
 $payees = mysqli_query($conn, "SELECT payee_id, payee_name FROM payees ORDER BY payee_name ASC");
 $categories = mysqli_query($conn, "SELECT category_id, category_name FROM expense_categories ORDER BY category_name ASC");
 $resellers = mysqli_query($conn, "SELECT reseller_id, reseller_name FROM resellers ORDER BY reseller_name ASC");
@@ -40,7 +68,18 @@ if (mysqli_num_rows($expense_query) === 0) {
 }
 $expense = mysqli_fetch_assoc($expense_query);
 
-if (!$isAdmin && intval($expense['expense_created_by']) !== intval($_SESSION['user_id'])) {
+// Company scope guard
+if (!$isSuperAdmin) {
+    if (!in_array($expense['expense_company_id'], $assignedCompanyIds)) {
+        $_SESSION['alert'] = ['type' => 'error', 'message' => 'You are not authorized to edit this record.'];
+        header("Location: expenses.php");
+        exit();
+    }
+}
+
+$preselectedCompany = count($companyRows) === 1 ? $companyRows[0]['company_id'] : $expense['expense_company_id'];
+
+if (!$isSuperAdmin && !$isAdmin && intval($expense['expense_created_by']) !== intval($_SESSION['user_id'])) {
     $_SESSION['alert'] = ['type' => 'error', 'message' => 'You are not authorized to edit this record.'];
     header("Location: expenses.php");
     exit();
@@ -76,12 +115,8 @@ if (isset($_POST['update_expense'])) {
     } else {
         $total_purchases = $gross_taxable;
     }
-        if ($vat_rate == 0) {
-        $taxable_net_vat = floatval($_POST['expense_taxable_net_vat']);
-    } else {
         $taxable_net_vat = $total_purchases - $exempt;
         if ($taxable_net_vat < 0) $taxable_net_vat = 0;
-    }
     $total_input_tax = round($taxable_net_vat * ($vat_rate / 100), 2);
     $total_receipt_amount = round(
         $taxable_net_vat + $total_input_tax + $service_charge + $exempt,
@@ -158,12 +193,16 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Company:</label>
                                 <div class="controls">
-                                    <select name="expense_company_id" class="span11" required>
-                                        <?php while ($row = mysqli_fetch_assoc($companies)) { ?>
-                                            <option value="<?= $row['company_id'] ?>" <?= $row['company_id'] == $expense['expense_company_id'] ? 'selected' : '' ?>>
+                                    <select name="expense_company_id" id="companySelect" class="span11" required>
+                                        <?php foreach ($companyRows as $row): ?>
+                                            <option
+                                                value="<?= $row['company_id'] ?>"
+                                                data-tin="<?= htmlspecialchars($row['company_tin'] ?? '') ?>"
+                                                <?= $row['company_id'] == $preselectedCompany ? 'selected' : '' ?>
+                                            >
                                                 <?= htmlspecialchars($row['company_name']) ?>
                                             </option>
-                                        <?php } ?>
+                                        <?php endforeach; ?>
                                     </select>
                                 </div>
                             </div>
@@ -172,7 +211,7 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Company TIN:</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" value="<?= htmlspecialchars($expense['company_tin'] ?? '') ?>" readonly>
+                                    <input type="text" class="span11" id="companyTin" value="<?= htmlspecialchars($expense['company_tin'] ?? '') ?>" readonly>
                                 </div>
                             </div>
 
@@ -319,10 +358,12 @@ unset($_SESSION['alert']);
 
                             <!-- Zero Rated removed (merged into Exempt) -->
                             <div class="control-group">
-                                <label class="control-label">VAT Rate (%):</label>
+                                <label class="control-label">VAT:</label>
                                 <div class="controls">
-                                    <input type="number" step="0.01" class="span11 calc-field" name="expense_vat_rate"
-                                           value="<?= $expense['expense_vat_rate'] == '12.00' ? '' : htmlspecialchars($expense['expense_vat_rate']) ?>" placeholder="12.00">
+                                    <select name="expense_vat_rate" id="vatRateInput" class="span11 calc-field">
+                                        <option value="12" <?= $expense['expense_vat_rate'] == '12.00' ? 'selected' : '' ?>>VAT Applicable (12%)</option>
+                                        <option value="0" <?= $expense['expense_vat_rate'] == '0.00' ? 'selected' : '' ?>>VAT Exempt / Zero Rated (0%)</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -378,7 +419,7 @@ unset($_SESSION['alert']);
                                     let capitalGoods = parseFloat(document.querySelector("input[name='expense_capital_goods']").value) || 0;
                                     let goodsOther = parseFloat(document.querySelector("input[name='expense_goods_other_than_capital']").value) || 0;
                                     let exempt = parseFloat(document.querySelector("input[name='expense_exempt']").value) || 0;
-                                    let vatRate = parseFloat(document.querySelector("input[name='expense_vat_rate']").value) || 0;
+                                    let vatRate = parseFloat(document.querySelector("select[name='expense_vat_rate']").value) || 0;
 
                                     // PRIORITY LOGIC
                                     let totalPurchases = 0;
@@ -413,6 +454,15 @@ unset($_SESSION['alert']);
 
                                 // Initialize on page load
                                 recalc();
+
+                                // Sync company TIN on dropdown change
+                                const companySelect = document.getElementById('companySelect');
+                                if (companySelect) {
+                                    companySelect.addEventListener('change', function() {
+                                        const tin = this.options[this.selectedIndex].getAttribute('data-tin') || '';
+                                        document.getElementById('companyTin').value = tin;
+                                    });
+                                }
                             });
                             </script>
 
