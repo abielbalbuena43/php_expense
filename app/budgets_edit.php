@@ -50,6 +50,41 @@ if (mysqli_num_rows($budget_query) === 0) {
 
 $budget = mysqli_fetch_assoc($budget_query);
 
+// Fetch assigned companies for admin
+$assignedCompanyIds = [];
+if (!$isSuperAdmin) {
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+
+    if (!in_array($budget['company_id'], $assignedCompanyIds)) {
+        setAlert('error', 'You are not authorized to edit this budget.');
+        header("Location: budgets.php");
+        exit();
+    }
+}
+
+// Fetch companies scoped by role for the dropdown
+if ($isSuperAdmin) {
+    $companiesResult = $conn->query("SELECT company_id, company_name FROM companies ORDER BY company_name ASC");
+} else {
+    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+    $compStmt = $conn->prepare("SELECT company_id, company_name FROM companies WHERE company_id IN ($placeholders) ORDER BY company_name ASC");
+    $compStmt->bind_param(str_repeat('i', count($assignedCompanyIds)), ...$assignedCompanyIds);
+    $compStmt->execute();
+    $companiesResult = $compStmt->get_result();
+}
+
+$companyRows = [];
+while ($row = $companiesResult->fetch_assoc()) {
+    $companyRows[] = $row;
+}
+
 /* -------------------------------
    HANDLE UPDATE
 --------------------------------*/
@@ -59,26 +94,40 @@ if (isset($_POST['update_budget'])) {
     $year = intval($_POST['year']);
     $amount = floatval($_POST['amount']);
 
-    $checkDuplicate = mysqli_query($conn, "
+    if ($isSuperAdmin) {
+        $company_id = intval($_POST['company_id']);
+    } else {
+        $submittedCompanyId = intval($_POST['company_id']);
+        $company_id = in_array($submittedCompanyId, $assignedCompanyIds)
+            ? $submittedCompanyId
+            : intval($budget['company_id']);
+    }
+
+    $checkStmt = $conn->prepare("
         SELECT budget_id 
         FROM budgets 
-        WHERE month = '$month' 
-        AND year = '$year' 
-        AND budget_id != '$budget_id'
+        WHERE month = ? 
+        AND year = ? 
+        AND company_id = ?
+        AND budget_id != ?
     ");
+    $checkStmt->bind_param("iiii", $month, $year, $company_id, $budget_id);
+    $checkStmt->execute();
+    $checkResult = $checkStmt->get_result();
+    $checkStmt->close();
 
-    if (mysqli_num_rows($checkDuplicate) > 0) {
+    if ($checkResult->num_rows > 0) {
 
-        setAlert('error', 'A budget for this period already exists.');
+        setAlert('error', 'A budget for this period already exists for this company.');
 
     } else {
 
         $updateStmt = $conn->prepare("
             UPDATE budgets 
-            SET month = ?, year = ?, amount = ? 
+            SET month = ?, year = ?, amount = ?, company_id = ?
             WHERE budget_id = ?
         ");
-        $updateStmt->bind_param("iidi", $month, $year, $amount, $budget_id);
+        $updateStmt->bind_param("iidii", $month, $year, $amount, $company_id, $budget_id);
 
         if ($updateStmt->execute()) {
 
@@ -131,6 +180,20 @@ unset($_SESSION['alert']);
 <div class="widget-content" style="padding: 20px;">
 
 <form method="post" class="form-horizontal">
+
+<!-- Company -->
+<div class="control-group">
+<label class="control-label">Company:</label>
+<div class="controls">
+<select name="company_id" class="span11" required>
+<?php foreach ($companyRows as $row): ?>
+<option value="<?= $row['company_id'] ?>" <?= $budget['company_id'] == $row['company_id'] ? 'selected' : '' ?>>
+<?= htmlspecialchars($row['company_name']) ?>
+</option>
+<?php endforeach; ?>
+</select>
+</div>
+</div>
 
 <!-- Month -->
 <div class="control-group">

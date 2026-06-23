@@ -39,6 +39,24 @@ if (!$result || mysqli_num_rows($result) == 0) {
 }
 
 $company = mysqli_fetch_assoc($result);
+
+// Company scope guard
+if (!$isSuperAdmin) {
+    $assignedCompanyIds = [];
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+
+    if (!in_array($company['company_id'], $assignedCompanyIds)) {
+        echo "<div class='alert alert-danger'>You are not authorized to view this company.</div>";
+        exit();
+    }
+}
 ?>
 
 <link rel="stylesheet" href="css/layout.css">
@@ -150,8 +168,12 @@ $company = mysqli_fetch_assoc($result);
 
                             <!-- Action Buttons -->
                             <div class="form-actions action-buttons">
+                                <?php if ($isSuperAdmin || $isAdmin): ?>
                                 <a href="companies_edit.php?id=<?= $company['company_id'] ?>" class="btn btn-primary">Edit Company</a>
+                                <?php endif; ?>
+                                <?php if ($isSuperAdmin): ?>
                                 <a href="companies_delete.php?id=<?= $company['company_id'] ?>" class="btn btn-danger">Delete Company</a>
+                                <?php endif; ?>
                                 <a href="companies.php" class="btn btn-secondary">Back</a>
                             </div>
 

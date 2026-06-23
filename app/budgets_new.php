@@ -16,6 +16,40 @@ if (!$isSuperAdmin && !$isAdmin) {
     exit();
 }
 
+// Fetch assigned companies for admin
+$assignedCompanyIds = [];
+if (!$isSuperAdmin) {
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+}
+
+// Fetch companies scoped by role
+if ($isSuperAdmin) {
+    $companiesResult = $conn->query("SELECT company_id, company_name FROM companies ORDER BY company_name ASC");
+} elseif (!empty($assignedCompanyIds)) {
+    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+    $compStmt = $conn->prepare("SELECT company_id, company_name FROM companies WHERE company_id IN ($placeholders) ORDER BY company_name ASC");
+    $compStmt->bind_param(str_repeat('i', count($assignedCompanyIds)), ...$assignedCompanyIds);
+    $compStmt->execute();
+    $companiesResult = $compStmt->get_result();
+} else {
+    $companiesResult = false;
+}
+
+$companyRows = [];
+if ($companiesResult) {
+    while ($row = $companiesResult->fetch_assoc()) {
+        $companyRows[] = $row;
+    }
+}
+$preselectedCompany = count($companyRows) === 1 ? $companyRows[0]['company_id'] : null;
+
 /* -------------------------------
    ALERT HELPER
 --------------------------------*/
@@ -48,9 +82,24 @@ if (isset($_POST['submit_budget'])) {
     $year = intval($_POST['year']);
     $amount = floatval($_POST['amount']);
 
-    // Prevent duplicate month/year
-    $checkStmt = $conn->prepare("SELECT COUNT(*) FROM budgets WHERE month = ? AND year = ?");
-    $checkStmt->bind_param("ii", $month, $year);
+    if ($isSuperAdmin) {
+        $company_id = intval($_POST['company_id']);
+    } else {
+        $submittedCompanyId = intval($_POST['company_id']);
+        $company_id = in_array($submittedCompanyId, $assignedCompanyIds)
+            ? $submittedCompanyId
+            : (!empty($assignedCompanyIds) ? intval($assignedCompanyIds[0]) : 0);
+    }
+
+    if ($company_id === 0) {
+        setAlert('error', 'No valid company selected.');
+        header("Location: budgets_new.php");
+        exit();
+    }
+
+    // Prevent duplicate month/year for the same company
+    $checkStmt = $conn->prepare("SELECT COUNT(*) FROM budgets WHERE month = ? AND year = ? AND company_id = ?");
+    $checkStmt->bind_param("iii", $month, $year, $company_id);
     $checkStmt->execute();
     $checkStmt->bind_result($count);
     $checkStmt->fetch();
@@ -58,15 +107,15 @@ if (isset($_POST['submit_budget'])) {
 
     if ($count > 0) {
 
-        setAlert('error', 'A budget for ' . $monthsArr[$month] . ' ' . $year . ' already exists.');
+        setAlert('error', 'A budget for ' . $monthsArr[$month] . ' ' . $year . ' already exists for this company.');
 
     } else {
 
         $insertStmt = $conn->prepare("
-            INSERT INTO budgets (month, year, amount, created_at)
-            VALUES (?, ?, ?, NOW())
+            INSERT INTO budgets (month, year, amount, company_id, created_at)
+            VALUES (?, ?, ?, ?, NOW())
         ");
-        $insertStmt->bind_param("iid", $month, $year, $amount);
+        $insertStmt->bind_param("iidi", $month, $year, $amount, $company_id);
 
         if ($insertStmt->execute()) {
 
@@ -125,6 +174,23 @@ if (isset($_POST['submit_budget'])) {
                     <div class="widget-content" style="padding:20px;">
 
                         <form method="post" class="form-horizontal">
+
+                            <!-- Company -->
+                            <div class="control-group">
+                                <label class="control-label">Company:</label>
+                                <div class="controls">
+                                    <select name="company_id" class="span11" required>
+                                        <?php if (!$preselectedCompany): ?>
+                                        <option value="" disabled selected>Select Company</option>
+                                        <?php endif; ?>
+                                        <?php foreach ($companyRows as $row): ?>
+                                            <option value="<?= $row['company_id'] ?>" <?= $preselectedCompany == $row['company_id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($row['company_name']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
 
                             <!-- Month -->
                             <div class="control-group">

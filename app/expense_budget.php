@@ -34,7 +34,9 @@ if (!$isSuperAdmin) {
 $selectedYear = intval($_GET['year'] ?? date('Y'));
 
 // ---------- Monthly Expenses ----------
-if ($isSuperAdmin || empty($assignedCompanyIds)) {
+$expenseData = array_fill(1, 12, 0);
+
+if ($isSuperAdmin) {
     $expenseStmt = $conn->prepare("
         SELECT MONTH(expense_date) AS month,
                SUM(expense_total_receipt_amount) AS total
@@ -43,7 +45,13 @@ if ($isSuperAdmin || empty($assignedCompanyIds)) {
         GROUP BY MONTH(expense_date)
     ");
     $expenseStmt->bind_param("i", $selectedYear);
-} else {
+    $expenseStmt->execute();
+    $expenseResult = $expenseStmt->get_result();
+    while ($row = $expenseResult->fetch_assoc()) {
+        $expenseData[$row['month']] = floatval($row['total']);
+    }
+    $expenseStmt->close();
+} elseif (!empty($assignedCompanyIds)) {
     $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
     $expenseStmt = $conn->prepare("
         SELECT MONTH(expense_date) AS month,
@@ -56,17 +64,14 @@ if ($isSuperAdmin || empty($assignedCompanyIds)) {
     $expenseParams = array_merge([$selectedYear], $assignedCompanyIds);
     $expenseTypes = 'i' . str_repeat('i', count($assignedCompanyIds));
     $expenseStmt->bind_param($expenseTypes, ...$expenseParams);
+    $expenseStmt->execute();
+    $expenseResult = $expenseStmt->get_result();
+    while ($row = $expenseResult->fetch_assoc()) {
+        $expenseData[$row['month']] = floatval($row['total']);
+    }
+    $expenseStmt->close();
 }
-$expenseStmt->execute();
-$expenseResult = $expenseStmt->get_result();
-
-$expenseData = array_fill(1, 12, 0);
-
-while ($row = $expenseResult->fetch_assoc()) {
-    $expenseData[$row['month']] = floatval($row['total']);
-}
-
-$expenseStmt->close();
+// If no companies assigned, $expenseData stays all zeros
 
 // ---------- Monthly Budgets ----------
 $budgetStmt = $conn->prepare("

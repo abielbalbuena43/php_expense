@@ -42,12 +42,16 @@ $exportQuery = "SELECT e.expense_id, e.expense_or_number, e.expense_date, e.expe
 $exportParams = [$selectedMonth, $selectedYear];
 $exportTypes = "ii";
 
-if (!$isSuperAdmin && !empty($assignedCompanyIds)) {
-    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
-    $exportQuery .= " AND e.expense_company_id IN ($placeholders)";
-    foreach ($assignedCompanyIds as $cid) {
-        $exportParams[] = $cid;
-        $exportTypes .= "i";
+if (!$isSuperAdmin) {
+    if (empty($assignedCompanyIds)) {
+        $exportQuery .= " AND 1=0";
+    } else {
+        $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+        $exportQuery .= " AND e.expense_company_id IN ($placeholders)";
+        foreach ($assignedCompanyIds as $cid) {
+            $exportParams[] = $cid;
+            $exportTypes .= "i";
+        }
     }
 }
 

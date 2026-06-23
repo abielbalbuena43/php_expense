@@ -274,12 +274,17 @@ if ($product_id > 0) {
     $types .= "i";
 }
 
-if (!$isSuperAdmin && !empty($assignedCompanyIds)) {
-    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
-    $query .= " AND e.expense_company_id IN ($placeholders)";
-    foreach ($assignedCompanyIds as $cid) {
-        $params[] = $cid;
-        $types .= "i";
+if (!$isSuperAdmin) {
+    if (empty($assignedCompanyIds)) {
+        // No companies assigned - show nothing
+        $query .= " AND 1=0";
+    } else {
+        $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+        $query .= " AND e.expense_company_id IN ($placeholders)";
+        foreach ($assignedCompanyIds as $cid) {
+            $params[] = $cid;
+            $types .= "i";
+        }
     }
 }
 

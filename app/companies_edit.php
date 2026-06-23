@@ -40,6 +40,24 @@ if (!$result || mysqli_num_rows($result) == 0) {
 
 $company = mysqli_fetch_assoc($result);
 
+// Company scope guard
+if (!$isSuperAdmin) {
+    $assignedCompanyIds = [];
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+
+    if (!in_array($company['company_id'], $assignedCompanyIds)) {
+        echo "<div class='alert alert-danger'>You are not authorized to edit this company.</div>";
+        exit();
+    }
+}
+
 // Handle the form submission for updating company details
 if (isset($_POST['update_company'])) {
     // Retrieve form data

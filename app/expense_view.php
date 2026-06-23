@@ -40,7 +40,8 @@ $query = "
            c.company_name,
            c.company_tin,
            p.payee_name, 
-           cat.category_name, 
+           p.payee_tin,
+           cat.category_name,
            r.reseller_name,
            eu.end_user_name,
            pr.product_name
@@ -91,6 +92,7 @@ if (!$isSuperAdmin) {
                     <div class="widget-content" style="padding: 20px;">
                         <form class="form-horizontal">
 
+                            <?php if ($isSuperAdmin || $isAdmin): ?>
                             <!-- Company -->
                             <div class="control-group">
                                 <label class="control-label">Company:</label>
@@ -104,6 +106,15 @@ if (!$isSuperAdmin) {
                                 <label class="control-label">Company TIN:</label>
                                 <div class="controls">
                                     <input type="text" class="span11" value="<?= htmlspecialchars($expense['company_tin']) ?>" disabled>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+
+                            <!-- Payee TIN -->
+                            <div class="control-group">
+                                <label class="control-label">Payee TIN:</label>
+                                <div class="controls">
+                                    <input type="text" class="span11" value="<?= htmlspecialchars($expense['payee_tin'] ?? 'N/A') ?>" disabled>
                                 </div>
                             </div>
 
@@ -164,14 +175,6 @@ if (!$isSuperAdmin) {
                             </div>
 
                             <!-- ===== New Fields Added Below ===== -->
-
-                            <!-- Gross Taxable -->
-                            <div class="control-group">
-                                <label class="control-label">Gross Taxable:</label>
-                                <div class="controls">
-                                    <input type="text" class="span11" value="<?= number_format($expense['expense_gross_taxable'], 2) ?>" disabled>
-                                </div>
-                            </div>
 
                             <!-- Service Charge -->
                             <div class="control-group">
@@ -239,6 +242,16 @@ if (!$isSuperAdmin) {
                                 </div>
                             </div>
 
+                            <!-- Taxable (Net of VAT) -->
+                            <div class="control-group">
+                                <label class="control-label">Taxable (Net of VAT):</label>
+                                <div class="controls">
+                                    <input type="text" class="span11" 
+                                        value="<?= number_format($expense['expense_taxable_net_vat'], 2) ?>" 
+                                        disabled>
+                                </div>
+                            </div>
+
                             <!-- Total Input Tax -->
                             <div class="control-group">
                                 <label class="control-label">Total Input Tax:</label>
@@ -249,19 +262,9 @@ if (!$isSuperAdmin) {
 
                             <!-- Total Receipt Amount -->
                             <div class="control-group">
-                                <label class="control-label">Total Receipt Amount:</label>
+                                <label class="control-label" style="font-weight:bold;">Total Receipt Amount:</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" value="<?= number_format($expense['expense_total_receipt_amount'], 2) ?>" disabled>
-                                </div>
-                            </div>
-
-                            <!-- Taxable (Net of VAT) -->
-                            <div class="control-group">
-                                <label class="control-label">Taxable (Net of VAT):</label>
-                                <div class="controls">
-                                    <input type="text" class="span11" 
-                                        value="<?= number_format($expense['expense_taxable_net_vat'], 2) ?>" 
-                                        disabled>
+                                    <input type="text" class="span11" value="<?= number_format($expense['expense_total_receipt_amount'], 2) ?>" disabled style="font-weight:bold; font-size:16px;">
                                 </div>
                             </div>
 

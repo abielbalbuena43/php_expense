@@ -117,7 +117,7 @@ if (
     $ownerRow = $ownerStmt->get_result()->fetch_assoc();
     $ownerStmt->close();
 
-    if (!$isAdmin && intval($ownerRow['expense_created_by']) !== intval($_SESSION['user_id'])) {
+    if (!$isAdmin && !$isSuperAdmin && intval($ownerRow['expense_created_by']) !== intval($_SESSION['user_id'])) {
         setAlert('error', 'You are not authorized to delete this record.');
         header("Location: " . $_SERVER['PHP_SELF']);
         exit();
@@ -214,12 +214,16 @@ if (!empty($searchQuery)) {
     $countTypes .= "ssss";
 }
 
-if (!$isSuperAdmin && !empty($assignedCompanyIds)) {
-    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
-    $countWhereClauses[] = "e.expense_company_id IN ($placeholders)";
-    foreach ($assignedCompanyIds as $cid) {
-        $countParams[] = $cid;
-        $countTypes .= "i";
+if (!$isSuperAdmin) {
+    if (empty($assignedCompanyIds)) {
+        $countWhereClauses[] = "1=0";
+    } else {
+        $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+        $countWhereClauses[] = "e.expense_company_id IN ($placeholders)";
+        foreach ($assignedCompanyIds as $cid) {
+            $countParams[] = $cid;
+            $countTypes .= "i";
+        }
     }
 }
 
@@ -301,12 +305,16 @@ if (!empty($searchQuery)) {
     $types .= "ssss";
 }
 
-if (!$isSuperAdmin && !empty($assignedCompanyIds)) {
-    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
-    $whereClauses[] = "e.expense_company_id IN ($placeholders)";
-    foreach ($assignedCompanyIds as $cid) {
-        $params[] = $cid;
-        $types .= "i";
+if (!$isSuperAdmin) {
+    if (empty($assignedCompanyIds)) {
+        $whereClauses[] = "1=0";
+    } else {
+        $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+        $whereClauses[] = "e.expense_company_id IN ($placeholders)";
+        foreach ($assignedCompanyIds as $cid) {
+            $params[] = $cid;
+            $types .= "i";
+        }
     }
 }
 

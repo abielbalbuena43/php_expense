@@ -16,6 +16,19 @@ if (!$isSuperAdmin && !$isAdmin) {
     exit();
 }
 
+// Fetch assigned companies for admin
+$assignedCompanyIds = [];
+if (!$isSuperAdmin) {
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+}
+
 /* -------------------------------
    ALERT HELPER
 --------------------------------*/
@@ -48,26 +61,34 @@ if (isset($_GET['success'])) {
 /* -------------------------------
    FETCH COMPANIES
 --------------------------------*/
-$sql = "
-SELECT 
-    company_id,
-    company_name,
-    company_tin,
-    rdo_code,
-    branch_code,
-    trade_name,
-    street,
-    barangay,
-    city,
-    province,
-    zip_code,
-    company_created_at
-FROM companies
-ORDER BY company_created_at DESC
-LIMIT 100
-";
-
-$result = $conn->query($sql);
+if ($isSuperAdmin) {
+    $sql = "
+        SELECT 
+            company_id, company_name, company_tin, rdo_code, branch_code,
+            trade_name, street, barangay, city, province, zip_code, company_created_at
+        FROM companies
+        ORDER BY company_created_at DESC
+        LIMIT 100
+    ";
+    $result = $conn->query($sql);
+} elseif (!empty($assignedCompanyIds)) {
+    $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+    $sql = "
+        SELECT 
+            company_id, company_name, company_tin, rdo_code, branch_code,
+            trade_name, street, barangay, city, province, zip_code, company_created_at
+        FROM companies
+        WHERE company_id IN ($placeholders)
+        ORDER BY company_created_at DESC
+        LIMIT 100
+    ";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param(str_repeat('i', count($assignedCompanyIds)), ...$assignedCompanyIds);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} else {
+    $result = false;
+}
 ?>
 
 <!DOCTYPE html>
@@ -125,10 +146,12 @@ unset($_SESSION['alert']);
 
 <div class="header-actions">
 
+<?php if ($isSuperAdmin): ?>
 <a href="companies_new.php" class="btn btn-success">
 <i class="icon-plus"></i>
 Create New Company
 </a>
+<?php endif; ?>
 
 </div>
 

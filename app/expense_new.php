@@ -57,17 +57,6 @@ $payees = mysqli_query($conn, "
     ORDER BY payee_name ASC
 ");
 
-$payees = mysqli_query($conn, "
-    SELECT 
-        payee_id, 
-        payee_name, 
-        payee_tin,
-        payee_address1,
-        payee_address2,
-        payee_category
-    FROM payees 
-    ORDER BY payee_name ASC
-");
 $categories = mysqli_query($conn, "SELECT category_id, category_name FROM expense_categories ORDER BY category_name ASC");
 $resellers = mysqli_query($conn, "SELECT reseller_id, reseller_name FROM resellers ORDER BY reseller_name ASC");
 $end_users = mysqli_query($conn, "SELECT end_user_id, end_user_name FROM expense_end_users ORDER BY end_user_name ASC");
@@ -75,7 +64,25 @@ $products = mysqli_query($conn, "SELECT product_id, product_name FROM expense_pr
 
 // Handle form submission
 if (isset($_POST['submit_expense'])) {
-    $company_id = mysqli_real_escape_string($conn, $_POST['expense_company_id']);
+    if ($isSuperAdmin) {
+        $company_id = intval($_POST['expense_company_id']);
+    } elseif ($isAdmin) {
+        $submittedCompanyId = intval($_POST['expense_company_id']);
+        if (in_array($submittedCompanyId, $assignedCompanyIds)) {
+            $company_id = $submittedCompanyId;
+        } else {
+            $company_id = !empty($assignedCompanyIds) ? intval($assignedCompanyIds[0]) : 0;
+        }
+    } else {
+        // Regular user: always forced to their single assigned company
+        $company_id = !empty($assignedCompanyIds) ? intval($assignedCompanyIds[0]) : 0;
+    }
+
+    if ($company_id === 0) {
+        $_SESSION['alert'] = "error";
+        header("Location: expense_new.php");
+        exit();
+    }
     $payee_id = mysqli_real_escape_string($conn, $_POST['expense_payee_id']);
     $category_id = mysqli_real_escape_string($conn, $_POST['expense_category_id']);
     $reseller_id = !empty($_POST['expense_reseller_id']) ? mysqli_real_escape_string($conn, $_POST['expense_reseller_id']) : NULL;
@@ -86,7 +93,6 @@ if (isset($_POST['submit_expense'])) {
     $remarks = mysqli_real_escape_string($conn, $_POST['expense_remarks']);
 
     // Inputs
-    $gross_taxable = floatval($_POST['expense_gross_taxable']);
     $service_charge = floatval($_POST['expense_service_charge']);
     $services = floatval($_POST['expense_services']);
     $capital_goods = floatval($_POST['expense_capital_goods']);
@@ -94,29 +100,18 @@ if (isset($_POST['submit_expense'])) {
     $exempt = floatval($_POST['expense_exempt']);
     $zero_rated = 0; // merged into exempt
     $vat_rate = floatval($_POST['expense_vat_rate']);
+    $gross_taxable = 0; // no longer collected from form, retained for schema compatibility
 
     // ============================
-    // FIXED CALCULATIONS (CORRECT)
+    // SUM-BASED CALCULATIONS
     // ============================
 
-    // Total Purchases (match old system priority)
-    if ($services > 0) {
-        $total_purchases = $services;
-    } elseif ($capital_goods > 0) {
-        $total_purchases = $capital_goods;
-    } elseif ($goods_other > 0) {
-        $total_purchases = $goods_other;
-    } else {
-        $total_purchases = $gross_taxable;
-    }
+    // Total Purchases = sum of Services + Capital Goods + Goods Other Than Capital
+    $total_purchases = $services + $capital_goods + $goods_other;
 
-    // Taxable Net (allow manual override when VAT = 0)
-        if ($vat_rate == 0) {
-            $taxable_net_vat = floatval($_POST['expense_taxable_net_vat']);
-        } else {
-            $taxable_net_vat = $total_purchases - $exempt;
-            if ($taxable_net_vat < 0) $taxable_net_vat = 0;
-        }
+    // Taxable Net (always auto-calculated, no manual override)
+    $taxable_net_vat = $total_purchases - $exempt;
+    if ($taxable_net_vat < 0) $taxable_net_vat = 0;
 
         // VAT
         $total_input_tax = round($taxable_net_vat * ($vat_rate / 100), 2);
@@ -138,7 +133,6 @@ if (isset($_POST['submit_expense'])) {
             expense_product_id,
             expense_or_number,
             expense_date,
-            expense_gross_taxable,
             expense_service_charge,
             expense_services,
             expense_capital_goods,
@@ -162,7 +156,6 @@ if (isset($_POST['submit_expense'])) {
             " . ($product_id ? "'$product_id'" : "NULL") . ",
             '$or_number',
             '$expense_date',
-            '$gross_taxable',
             '$service_charge',
             '$services',
             '$capital_goods',
@@ -220,6 +213,7 @@ unset($_SESSION['alert']);
                     <div class="widget-content" style="padding: 20px;">
                         <form action="" method="post" class="form-horizontal">
 
+                            <?php if ($isSuperAdmin || $isAdmin): ?>
                             <!-- Company -->
                             <div class="control-group">
                                 <label class="control-label">Company:</label>
@@ -245,7 +239,19 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Company TIN:</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" id="companyTin" name="company_tin" readonly placeholder="Select a company first">
+                                    <input type="text" class="span11" id="companyTin" readonly placeholder="Select a company first">
+                                </div>
+                            </div>
+                            <?php else: ?>
+                            <!-- User role: company auto-assigned silently -->
+                            <input type="hidden" name="expense_company_id" value="<?= $preselectedCompany ? $preselectedCompany : '' ?>">
+                            <?php endif; ?>
+
+                            <!-- Payee TIN (Auto-filled) -->
+                            <div class="control-group">
+                                <label class="control-label">Payee TIN:</label>
+                                <div class="controls">
+                                    <input type="text" class="span11" id="payeeTin" readonly placeholder="Select a payee">
                                 </div>
                             </div>
 
@@ -290,14 +296,6 @@ unset($_SESSION['alert']);
 
                                     </div>
 
-                                </div>
-                            </div>
-
-                            <!-- Payee TIN (Auto-filled) -->
-                            <div class="control-group">
-                                <label class="control-label">Payee TIN:</label>
-                                <div class="controls">
-                                    <input type="text" class="span11" id="payeeTin" readonly placeholder="Select a payee">
                                 </div>
                             </div>
 
@@ -378,13 +376,6 @@ unset($_SESSION['alert']);
 
                             <!-- Input fields for calculation -->
                             <div class="control-group">
-                                <label class="control-label">Gross Taxable:</label>
-                                <div class="controls">
-                                    <input type="number" class="span11 calc-field" name="expense_gross_taxable" step="0.01" placeholder="0.00" required />
-                                </div>
-                            </div>
-
-                            <div class="control-group">
                                 <label class="control-label">Service Charge:</label>
                                 <div class="controls">
                                     <input type="number" class="span11 calc-field" name="expense_service_charge" step="0.01" placeholder="0.00" />
@@ -447,6 +438,13 @@ unset($_SESSION['alert']);
                             </div>
 
                             <div class="control-group">
+                                <label class="control-label">Taxable (Net of VAT):</label>
+                                <div class="controls">
+                                    <input type="number" class="span11" name="expense_taxable_net_vat" readonly value="0.00" id="taxableNetVat" />
+                                </div>
+                            </div>
+
+                            <div class="control-group">
                                 <label class="control-label">Total VAT Tax:</label>
                                 <div class="controls">
                                     <input type="number" class="span11" name="expense_total_input_tax" readonly value="0.00" id="totalInputTax" />
@@ -454,16 +452,9 @@ unset($_SESSION['alert']);
                             </div>
 
                             <div class="control-group">
-                                <label class="control-label">Total Receipt Amount:</label>
+                                <label class="control-label" style="font-weight:bold;">Total Receipt Amount:</label>
                                 <div class="controls">
-                                    <input type="number" class="span11" name="expense_total_receipt_amount" readonly value="0.00" id="totalReceiptAmount" />
-                                </div>
-                            </div>
-
-                            <div class="control-group">
-                                <label class="control-label">Taxable (Net of VAT):</label>
-                                <div class="controls">
-                                    <input type="number" class="span11" name="expense_taxable_net_vat" value="0.00" id="taxableNetVat" />
+                                    <input type="number" class="span11" name="expense_total_receipt_amount" readonly value="0.00" id="totalReceiptAmount" style="font-weight:bold; font-size:16px;" />
                                 </div>
                             </div>
 
@@ -500,28 +491,17 @@ document.addEventListener('DOMContentLoaded', function () {
     const categorySelect = document.querySelector('[name="expense_category_id"]');
 
         function recalc() {
-    const gross_taxable = parseFloat(document.querySelector('[name="expense_gross_taxable"]').value) || 0;
     const service_charge = parseFloat(document.querySelector('[name="expense_service_charge"]').value) || 0;
     const services = parseFloat(document.querySelector('[name="expense_services"]').value) || 0;
     const capital_goods = parseFloat(document.querySelector('[name="expense_capital_goods"]').value) || 0;
     const goods_other = parseFloat(document.querySelector('[name="expense_goods_other_than_capital"]').value) || 0;
     let exempt = parseFloat(document.querySelector('[name="expense_exempt"]').value) || 0;
-    const zero_rated = 0;
 
     const vatCheckbox = document.getElementById('vatToggle');
     let vat_rate = vatCheckbox.checked ? 12 : 0;
 
-    // ✅ PRIORITY LOGIC (matches old system)
-    let total_purchases = 0;
-    if (services > 0) {
-        total_purchases = services;
-    } else if (capital_goods > 0) {
-        total_purchases = capital_goods;
-    } else if (goods_other > 0) {
-        total_purchases = goods_other;
-    } else {
-        total_purchases = gross_taxable;
-    }
+    // ✅ SUM LOGIC: Total Purchases = Services + Capital Goods + Goods Other Than Capital
+    let total_purchases = services + capital_goods + goods_other;
 
     totalPurchasesInput.value = total_purchases.toFixed(2);
 
@@ -531,14 +511,15 @@ document.addEventListener('DOMContentLoaded', function () {
         document.querySelector('[name="expense_exempt"]').value = total_purchases.toFixed(2);
     }
 
-    // ✅ TAXABLE NET
+    // ✅ TAXABLE NET (auto-calculated, read-only)
     let taxable_net_vat = total_purchases - exempt;
     if (taxable_net_vat < 0) taxable_net_vat = 0;
 
     if (!vatCheckbox.checked) {
         taxable_net_vat = 0;
-        taxableNetVatInput.value = "0.00";
     }
+
+    taxableNetVatInput.value = taxable_net_vat.toFixed(2);
 
     // ✅ VAT
     const total_input_tax = taxable_net_vat * (vat_rate / 100);
@@ -553,15 +534,10 @@ document.addEventListener('DOMContentLoaded', function () {
         input.addEventListener('input', recalc);
     });
 
-    const taxableInput = document.getElementById('taxableNetVat');
-
-    taxableInput.readOnly = document.getElementById('vatToggle').checked;
-
     document.getElementById('vatToggle').addEventListener('change', function() {
         const isChecked = this.checked;
 
         document.getElementById('vatRateInput').value = isChecked ? 12.00 : 0.00;
-        taxableInput.readOnly = isChecked;
 
         recalc();
     });
@@ -663,18 +639,19 @@ document.addEventListener('DOMContentLoaded', function () {
     // Allow manual category by default
     categorySelect.removeAttribute('disabled');
 
-    // Auto-display company TIN on change
+    // Auto-display company TIN on change (only present for admin/super_admin)
     const companySelect = document.getElementById('companySelect');
-    companySelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        const tin = selectedOption.getAttribute('data-tin') || '';
-        document.getElementById('companyTin').value = tin;
-    });
+    if (companySelect) {
+        companySelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const tin = selectedOption.getAttribute('data-tin') || '';
+            document.getElementById('companyTin').value = tin;
+        });
 
-    // Prefill TIN on page load if company is preselected
-    const preselected = companySelect.options[companySelect.selectedIndex];
-    if (preselected && preselected.value) {
-        document.getElementById('companyTin').value = preselected.getAttribute('data-tin') || '';
+        const preselected = companySelect.options[companySelect.selectedIndex];
+        if (preselected && preselected.value) {
+            document.getElementById('companyTin').value = preselected.getAttribute('data-tin') || '';
+        }
     }
 
 

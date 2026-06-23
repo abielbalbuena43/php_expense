@@ -40,9 +40,28 @@ if (!$result || mysqli_num_rows($result) == 0) {
 
 $budget = mysqli_fetch_assoc($result);
 
+// Company scope guard
+if (!$isSuperAdmin) {
+    $assignedCompanyIds = [];
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+
+    if (!in_array($budget['company_id'], $assignedCompanyIds)) {
+        echo "<div class='alert alert-error'>You are not authorized to view this budget.</div>";
+        exit();
+    }
+}
+
 /* -------------------------------
    MONTH FORMAT
 --------------------------------*/
+
 $months = [
     1=>"January",2=>"February",3=>"March",4=>"April",
     5=>"May",6=>"June",7=>"July",8=>"August",
@@ -66,6 +85,30 @@ $months = [
 
                     <div class="widget-content" style="padding: 20px;">
                         <form class="form-horizontal">
+
+                            <!-- Company -->
+                            <div class="control-group">
+                                <label class="control-label">Company:</label>
+                                <div class="controls">
+                                    <input 
+                                        type="text" 
+                                        class="span11"
+                                        value="<?php
+                                            if (!empty($budget['company_id'])) {
+                                                $compStmt = $conn->prepare("SELECT company_name FROM companies WHERE company_id = ?");
+                                                $compStmt->bind_param("i", $budget['company_id']);
+                                                $compStmt->execute();
+                                                $compRow = $compStmt->get_result()->fetch_assoc();
+                                                echo htmlspecialchars($compRow['company_name'] ?? 'Unknown');
+                                                $compStmt->close();
+                                            } else {
+                                                echo 'Unassigned';
+                                            }
+                                        ?>"
+                                        disabled
+                                    >
+                                </div>
+                            </div>
 
                             <!-- Month -->
                             <div class="control-group">
@@ -112,7 +155,8 @@ $months = [
                                 <a href="budgets_edit.php?id=<?= $budget['budget_id'] ?>" class="btn btn-primary">
                                     Edit Budget
                                 </a>
-
+                                <?php endif; ?>
+                                <?php if ($isSuperAdmin): ?>
                                 <a href="budgets_delete.php?id=<?= $budget['budget_id'] ?>" 
                                 class="btn btn-danger"
                                 onclick="return confirm('Are you sure you want to delete this budget?');">

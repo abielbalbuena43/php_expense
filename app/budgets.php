@@ -17,6 +17,19 @@ if (!$isSuperAdmin && !$isAdmin) {
     exit();
 }
 
+// Fetch assigned companies for admin
+$assignedCompanyIds = [];
+if (!$isSuperAdmin) {
+    $ucStmt = $conn->prepare("SELECT company_id FROM user_companies WHERE user_id = ?");
+    $ucStmt->bind_param("i", $_SESSION['user_id']);
+    $ucStmt->execute();
+    $ucResult = $ucStmt->get_result();
+    while ($ucRow = $ucResult->fetch_assoc()) {
+        $assignedCompanyIds[] = $ucRow['company_id'];
+    }
+    $ucStmt->close();
+}
+
 /* -------------------------------
    ALERT HELPER
 --------------------------------*/
@@ -83,6 +96,19 @@ if (!isset($_SESSION['csrf_token'])) {
    SQL QUERY
 --------------------------------*/
 $sql = "SELECT * FROM budgets";
+
+if (!$isSuperAdmin) {
+    if (empty($assignedCompanyIds)) {
+        $conditions[] = "1=0";
+    } else {
+        $placeholders = implode(',', array_fill(0, count($assignedCompanyIds), '?'));
+        $conditions[] = "company_id IN ($placeholders)";
+        foreach ($assignedCompanyIds as $cid) {
+            $params[] = $cid;
+            $types .= "i";
+        }
+    }
+}
 
 if (!empty($conditions)) {
     $sql .= " WHERE " . implode(" AND ", $conditions);

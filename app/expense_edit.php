@@ -87,7 +87,19 @@ if (!$isSuperAdmin && !$isAdmin && intval($expense['expense_created_by']) !== in
 
 // Handle update form submission
 if (isset($_POST['update_expense'])) {
-    $company_id = mysqli_real_escape_string($conn, $_POST['expense_company_id']);
+    if ($isSuperAdmin) {
+        $company_id = intval($_POST['expense_company_id']);
+    } elseif ($isAdmin) {
+        $submittedCompanyId = intval($_POST['expense_company_id']);
+        if (in_array($submittedCompanyId, $assignedCompanyIds)) {
+            $company_id = $submittedCompanyId;
+        } else {
+            $company_id = intval($expense['expense_company_id']);
+        }
+    } else {
+        // Regular user: always forced to their assigned company, ignore submitted value
+        $company_id = !empty($assignedCompanyIds) ? intval($assignedCompanyIds[0]) : intval($expense['expense_company_id']);
+    }
     $payee_id = mysqli_real_escape_string($conn, $_POST['expense_payee_id']);
     $category_id = mysqli_real_escape_string($conn, $_POST['expense_category_id']);
     $reseller_id = !empty($_POST['expense_reseller_id']) ? mysqli_real_escape_string($conn, $_POST['expense_reseller_id']) : NULL;
@@ -96,7 +108,6 @@ if (isset($_POST['update_expense'])) {
     $remarks = mysqli_real_escape_string($conn, $_POST['expense_remarks']);
 
     // Core numeric fields
-    $gross_taxable = floatval($_POST['expense_gross_taxable']);
     $service_charge = floatval($_POST['expense_service_charge']);
     $services = floatval($_POST['expense_services']);
     $capital_goods = floatval($_POST['expense_capital_goods']);
@@ -104,19 +115,12 @@ if (isset($_POST['update_expense'])) {
     $exempt = floatval($_POST['expense_exempt']);
     $zero_rated = 0; // merged into exempt
     $vat_rate = floatval($_POST['expense_vat_rate']);
+    $gross_taxable = 0; // no longer collected from form, retained for schema compatibility
 
-    // ===== Recalculate to prevent tampering =====
-        if ($services > 0) {
-        $total_purchases = $services;
-    } elseif ($capital_goods > 0) {
-        $total_purchases = $capital_goods;
-    } elseif ($goods_other > 0) {
-        $total_purchases = $goods_other;
-    } else {
-        $total_purchases = $gross_taxable;
-    }
-        $taxable_net_vat = $total_purchases - $exempt;
-        if ($taxable_net_vat < 0) $taxable_net_vat = 0;
+    // ===== Sum-based calculation, recalculated server-side to prevent tampering =====
+    $total_purchases = $services + $capital_goods + $goods_other;
+    $taxable_net_vat = $total_purchases - $exempt;
+    if ($taxable_net_vat < 0) $taxable_net_vat = 0;
     $total_input_tax = round($taxable_net_vat * ($vat_rate / 100), 2);
     $total_receipt_amount = round(
         $taxable_net_vat + $total_input_tax + $service_charge + $exempt,
@@ -134,7 +138,6 @@ if (isset($_POST['update_expense'])) {
         expense_product_id = " . (!empty($_POST['expense_product_id']) ? "'".mysqli_real_escape_string($conn, $_POST['expense_product_id'])."'" : "NULL") . ",
         expense_or_number = '$or_number',
         expense_date = '$expense_date',
-        expense_gross_taxable = '$gross_taxable',
         expense_service_charge = '$service_charge',
         expense_services = '$services',
         expense_capital_goods = '$capital_goods',
@@ -189,6 +192,7 @@ unset($_SESSION['alert']);
                     <div class="widget-content" style="padding: 20px;">
                         <form action="" method="post" class="form-horizontal">
 
+                            <?php if ($isSuperAdmin || $isAdmin): ?>
                             <!-- Company -->
                             <div class="control-group">
                                 <label class="control-label">Company:</label>
@@ -212,6 +216,18 @@ unset($_SESSION['alert']);
                                 <label class="control-label">Company TIN:</label>
                                 <div class="controls">
                                     <input type="text" class="span11" id="companyTin" value="<?= htmlspecialchars($expense['company_tin'] ?? '') ?>" readonly>
+                                </div>
+                            </div>
+                            <?php else: ?>
+                            <!-- User role: company auto-assigned silently -->
+                            <input type="hidden" name="expense_company_id" value="<?= htmlspecialchars($expense['expense_company_id']) ?>">
+                            <?php endif; ?>
+
+                            <!-- Payee TIN -->
+                            <div class="control-group">
+                                <label class="control-label">Payee TIN:</label>
+                                <div class="controls">
+                                    <input type="text" class="span11" id="payeeTinDisplay" readonly placeholder="N/A">
                                 </div>
                             </div>
 
@@ -309,14 +325,6 @@ unset($_SESSION['alert']);
                             <!-- ===== Editable Numeric Fields ===== -->
 
                             <div class="control-group">
-                                <label class="control-label">Gross Taxable:</label>
-                                <div class="controls">
-                                    <input type="number" step="0.01" class="span11 calc-field" name="expense_gross_taxable"
-                                           value="<?= $expense['expense_gross_taxable'] == '0.00' ? '' : htmlspecialchars($expense['expense_gross_taxable']) ?>" placeholder="0.00">
-                                </div>
-                            </div>
-
-                            <div class="control-group">
                                 <label class="control-label">Service Charge:</label>
                                 <div class="controls">
                                     <input type="number" step="0.01" class="span11 calc-field" name="expense_service_charge"
@@ -378,6 +386,14 @@ unset($_SESSION['alert']);
                             </div>
 
                             <div class="control-group">
+                                <label class="control-label">Taxable (Net of VAT):</label>
+                                <div class="controls">
+                                    <input type="number" class="span11" id="expense_taxable_net_vat" readonly
+                                        value="<?= htmlspecialchars($expense['expense_taxable_net_vat']) ?>">
+                                </div>
+                            </div>
+
+                            <div class="control-group">
                                 <label class="control-label">Total Input Tax:</label>
                                 <div class="controls">
                                     <input type="number" class="span11" id="expense_total_input_tax" readonly
@@ -386,18 +402,10 @@ unset($_SESSION['alert']);
                             </div>
 
                             <div class="control-group">
-                                <label class="control-label">Total Receipt Amount:</label>
+                                <label class="control-label" style="font-weight:bold;">Total Receipt Amount:</label>
                                 <div class="controls">
                                     <input type="number" class="span11" id="expense_total_receipt_amount" readonly
-                                           value="<?= htmlspecialchars($expense['expense_total_receipt_amount']) ?>">
-                                </div>
-                            </div>
-
-                            <div class="control-group">
-                                <label class="control-label">Taxable (Net of VAT):</label>
-                                <div class="controls">
-                                    <input type="number" class="span11" id="expense_taxable_net_vat" readonly
-                                        value="<?= htmlspecialchars($expense['expense_taxable_net_vat']) ?>">
+                                           value="<?= htmlspecialchars($expense['expense_total_receipt_amount']) ?>" style="font-weight:bold; font-size:16px;">
                                 </div>
                             </div>
 
@@ -413,7 +421,6 @@ unset($_SESSION['alert']);
                                 const taxableNetVatInput = document.getElementById("expense_taxable_net_vat");
 
                                 function recalc() {
-                                    let grossTaxable = parseFloat(document.querySelector("input[name='expense_gross_taxable']").value) || 0;
                                     let serviceCharge = parseFloat(document.querySelector("input[name='expense_service_charge']").value) || 0;
                                     let services = parseFloat(document.querySelector("input[name='expense_services']").value) || 0;
                                     let capitalGoods = parseFloat(document.querySelector("input[name='expense_capital_goods']").value) || 0;
@@ -421,17 +428,8 @@ unset($_SESSION['alert']);
                                     let exempt = parseFloat(document.querySelector("input[name='expense_exempt']").value) || 0;
                                     let vatRate = parseFloat(document.querySelector("select[name='expense_vat_rate']").value) || 0;
 
-                                    // PRIORITY LOGIC
-                                    let totalPurchases = 0;
-                                    if (services > 0) {
-                                        totalPurchases = services;
-                                    } else if (capitalGoods > 0) {
-                                        totalPurchases = capitalGoods;
-                                    } else if (goodsOther > 0) {
-                                        totalPurchases = goodsOther;
-                                    } else {
-                                        totalPurchases = grossTaxable;
-                                    }
+                                    // SUM LOGIC: Total Purchases = Services + Capital Goods + Goods Other Than Capital
+                                    let totalPurchases = services + capitalGoods + goodsOther;
 
                                     // TAXABLE NET
                                     let taxableNetVat = totalPurchases - exempt;
@@ -455,7 +453,7 @@ unset($_SESSION['alert']);
                                 // Initialize on page load
                                 recalc();
 
-                                // Sync company TIN on dropdown change
+                               // Sync company TIN on dropdown change
                                 const companySelect = document.getElementById('companySelect');
                                 if (companySelect) {
                                     companySelect.addEventListener('change', function() {
@@ -464,6 +462,11 @@ unset($_SESSION['alert']);
                                     });
                                 }
                             });
+                            </script>
+
+                            <script>
+                            // Payee TIN display is informational only on edit (legacy data has no data-tin on payee options here)
+                            // Left as a static readonly field; populate manually if payee_tin is added to the payee select's data attributes in the future.
                             </script>
 
                             <!-- Remarks -->

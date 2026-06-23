@@ -43,7 +43,6 @@ $query = "
         c.company_name,
         p.payee_name,
         cat.category_name,
-        e.expense_gross_taxable,
         e.expense_service_charge,
         e.expense_services,
         e.expense_capital_goods,
@@ -55,6 +54,7 @@ $query = "
         e.expense_total_purchases,
         e.expense_total_receipt_amount,
         e.expense_taxable_net_vat,
+e.expense_company_id,
         e.expense_remarks,
         e.expense_created_by
     FROM expenses e
@@ -168,10 +168,6 @@ unset($_SESSION['alert']);
                                 <td><?= htmlspecialchars($expense['category_name']) ?></td>
                             </tr>
                             <tr>
-                                <th>Gross Taxable</th>
-                                <td>₱<?= number_format($expense['expense_gross_taxable'], 2) ?></td>
-                            </tr>
-                            <tr>
                                 <th>Service Charge</th>
                                 <td>₱<?= number_format($expense['expense_service_charge'], 2) ?></td>
                             </tr>
@@ -200,20 +196,20 @@ unset($_SESSION['alert']);
                                 <td><?= htmlspecialchars($expense['expense_vat_rate']) ?>%</td>
                             </tr>
                             <tr>
-                                <th>Total Input Tax</th>
-                                <td>₱<?= number_format($expense['expense_total_input_tax'], 2) ?></td>
-                            </tr>
-                            <tr>
                                 <th>Total Purchases</th>
                                 <td>₱<?= number_format($expense['expense_total_purchases'], 2) ?></td>
                             </tr>
                             <tr>
-                                <th>Total Receipt Amount</th>
-                                <td>₱<?= number_format($expense['expense_total_receipt_amount'], 2) ?></td>
-                            </tr>
-                            <tr>
                                 <th>Taxable (Net of VAT)</th>
                                 <td>₱<?= number_format($expense['expense_taxable_net_vat'], 2) ?></td>
+                            </tr>
+                            <tr>
+                                <th>Total Input Tax</th>
+                                <td>₱<?= number_format($expense['expense_total_input_tax'], 2) ?></td>
+                            </tr>
+                            <tr style="font-weight:bold; font-size:16px;">
+                                <th>Total Receipt Amount</th>
+                                <td>₱<?= number_format($expense['expense_total_receipt_amount'], 2) ?></td>
                             </tr>
                             <tr>
                                 <th>Remarks</th>
