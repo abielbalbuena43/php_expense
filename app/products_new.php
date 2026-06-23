@@ -25,6 +25,15 @@ if (isset($_POST['submit_product'])) {
         $query = "INSERT INTO expense_products (product_name, created_at) VALUES ('$product_name', NOW())";
 
         if (mysqli_query($conn, $query)) {
+            $new_product_id = mysqli_insert_id($conn);
+            $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
+            $logQuery = "
+                INSERT INTO logs (log_action, log_user, log_details, log_date)
+                VALUES ('Product created', '$username', 'Product: $product_name (Product ID: $new_product_id)', NOW())
+            ";
+            mysqli_query($conn, $logQuery);
+
             $_SESSION['alert'] = "Product added successfully!";
             header("Location: products.php");
             exit();

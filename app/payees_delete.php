@@ -56,6 +56,15 @@ if (isset($_POST['confirm_delete'])) {
     $delete_query = "DELETE FROM payees WHERE payee_id = $payee_id";
 
     if (mysqli_query($conn, $delete_query)) {
+        $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+        $payeeName = mysqli_real_escape_string($conn, $payee['payee_name']);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('Payee deleted', '$username', 'Payee: $payeeName (Payee ID: $payee_id)', NOW())
+        ";
+        mysqli_query($conn, $logQuery);
+
         $_SESSION['alert'] = "Payee deleted successfully!";
         header("Location: payees.php");
         exit();

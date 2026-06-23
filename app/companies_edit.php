@@ -105,6 +105,14 @@ if (isset($_POST['update_company'])) {
         ";
 
         if (mysqli_query($conn, $update_query)) {
+            $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
+            $logQuery = "
+                INSERT INTO logs (log_action, log_user, log_details, log_date)
+                VALUES ('Company updated', '$username', 'Company ID: $company_id, Name: $company_name', NOW())
+            ";
+            mysqli_query($conn, $logQuery);
+
             $_SESSION['alert'] = "Company updated successfully!";
             header("Location: companies.php");
             exit();

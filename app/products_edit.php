@@ -46,6 +46,14 @@ if (isset($_POST['update_product'])) {
         ";
 
         if (mysqli_query($conn, $update_query)) {
+            $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
+            $logQuery = "
+                INSERT INTO logs (log_action, log_user, log_details, log_date)
+                VALUES ('Product updated', '$username', 'Product: $product_name (Product ID: $product_id)', NOW())
+            ";
+            mysqli_query($conn, $logQuery);
+
             $_SESSION['alert'] = "Product updated successfully!";
             header("Location: products.php");
             exit();

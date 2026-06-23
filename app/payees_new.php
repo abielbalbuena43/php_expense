@@ -47,6 +47,15 @@ if (isset($_POST['submit_payee'])) {
     ";
 
     if (mysqli_query($conn, $query)) {
+        $new_payee_id = mysqli_insert_id($conn);
+        $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('Payee created', '$username', 'Payee: $name (Payee ID: $new_payee_id)', NOW())
+        ";
+        mysqli_query($conn, $logQuery);
+
         $_SESSION['alert'] = "Payee added successfully!";
         header("Location: payees.php");
         exit();
@@ -85,7 +94,7 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Payee Name:</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" name="payee_name" required />
+                                    <input type="text" class="span11" name="payee_name" placeholder="Type payee name" required />
                                 </div>
                             </div>
 
@@ -93,7 +102,7 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Payee Type:</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" name="payee_type" required />
+                                    <input type="text" class="span11" name="payee_type" placeholder="Type payee type" required />
                                 </div>
                             </div>
 
@@ -101,7 +110,7 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">TIN (Optional):</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" name="payee_tin" />
+                                    <input type="text" class="span11" name="payee_tin" placeholder="Type TIN digits only" />
                                 </div>
                             </div>
 
@@ -109,7 +118,7 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Category (Optional):</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" name="payee_category" />
+                                    <input type="text" class="span11" name="payee_category" placeholder="Type category" />
                                 </div>
                             </div>
 
@@ -117,7 +126,7 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Address 1 (Optional):</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" name="payee_address1" />
+                                    <input type="text" class="span11" name="payee_address1" placeholder="Type address line 1" />
                                 </div>
                             </div>
 
@@ -125,7 +134,7 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">Address 2 (Optional):</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" name="payee_address2" />
+                                    <input type="text" class="span11" name="payee_address2" placeholder="Type address line 2" />
                                 </div>
                             </div>
 

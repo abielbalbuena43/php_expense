@@ -25,6 +25,15 @@ if (isset($_POST['submit_reseller'])) {
         $query = "INSERT INTO resellers (reseller_name, reseller_created_at) VALUES ('$reseller_name', NOW())";
 
         if (mysqli_query($conn, $query)) {
+            $new_reseller_id = mysqli_insert_id($conn);
+            $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
+            $logQuery = "
+                INSERT INTO logs (log_action, log_user, log_details, log_date)
+                VALUES ('Reseller created', '$username', 'Reseller: $reseller_name (Reseller ID: $new_reseller_id)', NOW())
+            ";
+            mysqli_query($conn, $logQuery);
+
             $_SESSION['alert'] = "Reseller added successfully!";
             header("Location: resellers.php");
             exit();

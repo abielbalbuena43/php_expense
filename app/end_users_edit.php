@@ -47,6 +47,14 @@ if (isset($_POST['update_end_user'])) {
         ";
 
         if (mysqli_query($conn, $update_query)) {
+            $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
+            $logQuery = "
+                INSERT INTO logs (log_action, log_user, log_details, log_date)
+                VALUES ('End User updated', '$username', 'End User: $end_user_name (End User ID: $end_user_id)', NOW())
+            ";
+            mysqli_query($conn, $logQuery);
+
             $_SESSION['alert'] = "End User updated successfully!";
             header("Location: end_users.php");
             exit();

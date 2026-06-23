@@ -611,12 +611,14 @@ $status = "Active";
         </li>
         <?php endif; ?>
 
+        <?php if ($isSuperAdmin): ?>
         <li class="<?php echo ($current_page == 'logs.php') ? 'active' : ''; ?>">
             <a href="logs.php">
                 <i class="icon icon-user"></i>
                 <span>Logs</span>
             </a>
         </li>
+        <?php endif; ?>
 
         <!-- Reports Dropdown -->
         <li class="submenu <?php echo (in_array($current_page, ['reports.php','expense_budget.php'])) ? 'active open' : ''; ?>">

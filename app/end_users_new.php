@@ -25,6 +25,15 @@ if (isset($_POST['submit_end_user'])) {
         $query = "INSERT INTO expense_end_users (end_user_name, created_at) VALUES ('$end_user_name', NOW())";
 
         if (mysqli_query($conn, $query)) {
+            $new_end_user_id = mysqli_insert_id($conn);
+            $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
+            $logQuery = "
+                INSERT INTO logs (log_action, log_user, log_details, log_date)
+                VALUES ('End User created', '$username', 'End User: $end_user_name (End User ID: $new_end_user_id)', NOW())
+            ";
+            mysqli_query($conn, $logQuery);
+
             $_SESSION['alert'] = "End User created successfully!";
             header("Location: end_users.php");
             exit();
@@ -69,7 +78,7 @@ unset($_SESSION['alert']);
                             <div class="control-group">
                                 <label class="control-label">End User Name:</label>
                                 <div class="controls">
-                                    <input type="text" class="span11" name="end_user_name" required>
+                                    <input type="text" class="span11" name="end_user_name" placeholder="Type end user name" required>
                                 </div>
                             </div>
 

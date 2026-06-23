@@ -49,6 +49,15 @@ if (isset($_POST['confirm_delete'])) {
     $delete_query = "DELETE FROM companies WHERE company_id = '$company_id'";
 
     if (mysqli_query($conn, $delete_query)) {
+        $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+        $companyName = mysqli_real_escape_string($conn, $company['company_name']);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('Company deleted', '$username', 'Company ID: $company_id, Name: $companyName', NOW())
+        ";
+        mysqli_query($conn, $logQuery);
+
         $_SESSION['alert'] = "Company deleted successfully!";
         header("Location: companies.php");
         exit();

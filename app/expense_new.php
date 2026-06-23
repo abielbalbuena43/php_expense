@@ -175,10 +175,28 @@ if (isset($_POST['submit_expense'])) {
 
     if (mysqli_query($conn, $query)) {
         $expense_id = mysqli_insert_id($conn);
-        
-        $logQuery = "INSERT INTO logs (log_action, log_user, log_details, log_date) VALUES ('Expense created', '" . mysqli_real_escape_string($conn, $_SESSION['username']) . "', 'Expense ID: $expense_id', NOW())";
+        $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
+        // Fetch payee name and company name for a readable log entry
+        $logDetailsStmt = $conn->prepare("
+            SELECT p.payee_name, c.company_name
+            FROM payees p, companies c
+            WHERE p.payee_id = ? AND c.company_id = ?
+        ");
+        $logDetailsStmt->bind_param("ii", $payee_id, $company_id);
+        $logDetailsStmt->execute();
+        $logDetailsRow = $logDetailsStmt->get_result()->fetch_assoc();
+        $logDetailsStmt->close();
+
+        $payeeName = mysqli_real_escape_string($conn, $logDetailsRow['payee_name'] ?? 'Unknown Payee');
+        $companyName = mysqli_real_escape_string($conn, $logDetailsRow['company_name'] ?? 'Unknown Company');
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('Expense created', '$username', 'Payee: $payeeName, Company: $companyName (Expense ID: $expense_id)', NOW())
+        ";
         mysqli_query($conn, $logQuery);
-        
+
         $_SESSION['alert'] = "Expense added successfully!";
         header("Location: expenses.php");
         exit();

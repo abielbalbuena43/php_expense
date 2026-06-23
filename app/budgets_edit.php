@@ -133,9 +133,25 @@ if (isset($_POST['update_budget'])) {
 
             $username = mysqli_real_escape_string($conn, $_SESSION['username']);
 
+            $monthsArr = [
+                1=>"January",2=>"February",3=>"March",4=>"April",
+                5=>"May",6=>"June",7=>"July",8=>"August",
+                9=>"September",10=>"October",11=>"November",12=>"December"
+            ];
+
+            // Fetch company name for a readable log entry
+            $companyNameStmt = $conn->prepare("SELECT company_name FROM companies WHERE company_id = ?");
+            $companyNameStmt->bind_param("i", $company_id);
+            $companyNameStmt->execute();
+            $companyNameRow = $companyNameStmt->get_result()->fetch_assoc();
+            $companyNameStmt->close();
+
+            $companyName = mysqli_real_escape_string($conn, $companyNameRow['company_name'] ?? 'Unknown Company');
+            $periodLabel = $monthsArr[$month] . ' ' . $year;
+
             mysqli_query($conn, "
                 INSERT INTO logs (log_action, log_user, log_details, log_date)
-                VALUES ('Budget updated', '$username', 'Budget ID: $budget_id', NOW())
+                VALUES ('Budget updated', '$username', 'Period: $periodLabel, Company: $companyName (Budget ID: $budget_id)', NOW())
             ");
 
             header("Location: budgets.php?success=edited");

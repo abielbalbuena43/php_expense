@@ -41,6 +41,15 @@ if (isset($_POST['submit_company'])) {
     ";
 
     if (mysqli_query($conn, $query)) {
+        $new_company_id = mysqli_insert_id($conn);
+        $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('Company created', '$username', 'Company ID: $new_company_id, Name: $company_name', NOW())
+        ";
+        mysqli_query($conn, $logQuery);
+
         $_SESSION['alert'] = "Company added successfully!";
         header("Location: companies.php");
         exit();

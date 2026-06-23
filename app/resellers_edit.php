@@ -47,6 +47,14 @@ if (isset($_POST['update_reseller'])) {
         ";
 
         if (mysqli_query($conn, $update_query)) {
+            $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
+            $logQuery = "
+                INSERT INTO logs (log_action, log_user, log_details, log_date)
+                VALUES ('Reseller updated', '$username', 'Reseller: $reseller_name (Reseller ID: $reseller_id)', NOW())
+            ";
+            mysqli_query($conn, $logQuery);
+
             $_SESSION['alert'] = "Reseller updated successfully!";
             header("Location: resellers.php");
             exit();

@@ -52,6 +52,15 @@ if (isset($_POST['confirm_delete'])) {
     $delete_query = "DELETE FROM resellers WHERE reseller_id = $reseller_id";
 
     if (mysqli_query($conn, $delete_query)) {
+        $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+        $resellerName = mysqli_real_escape_string($conn, $reseller['reseller_name']);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('Reseller deleted', '$username', 'Reseller: $resellerName (Reseller ID: $reseller_id)', NOW())
+        ";
+        mysqli_query($conn, $logQuery);
+
         $_SESSION['alert'] = "Reseller deleted successfully!";
         header("Location: resellers.php");
         exit();
@@ -115,8 +124,8 @@ if (isset($_SESSION['alert'])) {
                                 <i class="icon-trash"></i> Confirm Delete
                             </button>
                             <a href="resellers.php" class="btn btn-secondary">Cancel</a>
+                        </div>
                         </form>
-                    </div>
                 </div>
 
             </div>

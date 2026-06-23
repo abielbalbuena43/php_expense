@@ -49,6 +49,15 @@ if (isset($_POST['confirm_delete'])) {
     $delete_query = "DELETE FROM expense_end_users WHERE end_user_id = '$end_user_id'";
 
     if (mysqli_query($conn, $delete_query)) {
+        $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+        $endUserName = mysqli_real_escape_string($conn, $end_user['end_user_name']);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('End User deleted', '$username', 'End User: $endUserName (End User ID: $end_user_id)', NOW())
+        ";
+        mysqli_query($conn, $logQuery);
+
         $_SESSION['alert'] = "End User deleted successfully!";
         header("Location: end_users.php");
         exit();
@@ -106,8 +115,8 @@ unset($_SESSION['alert']);
                                 <i class="icon-trash"></i> Confirm Delete
                             </button>
                             <a href="end_users.php" class="btn btn-secondary">Cancel</a>
+                        </div>
                         </form>
-                    </div>
                 </div>
 
             </div>

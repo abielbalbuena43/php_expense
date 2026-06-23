@@ -94,10 +94,16 @@ if (isset($_POST['confirm_delete'])) {
     $delete_query = "DELETE FROM expenses WHERE expense_id = $expense_id";
 
     if (mysqli_query($conn, $delete_query)) {
-        // Log the action (exact same as expense_edit.php)
-        $logQuery = "INSERT INTO logs (log_action, log_user, log_details, log_date) VALUES ('Expense deleted', '" . mysqli_real_escape_string($conn, $_SESSION['username']) . "', 'Expense ID: $expense_id', NOW())";
+        $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+        $payeeName = mysqli_real_escape_string($conn, $expense['payee_name']);
+        $companyName = mysqli_real_escape_string($conn, $expense['company_name']);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('Expense deleted', '$username', 'Payee: $payeeName, Company: $companyName (Expense ID: $expense_id)', NOW())
+        ";
         mysqli_query($conn, $logQuery);
-        
+
         $_SESSION['alert'] = "Expense deleted successfully!";
         header("Location: expenses.php");
         exit();

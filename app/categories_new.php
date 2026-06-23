@@ -43,7 +43,7 @@ if (isset($_POST['submit_category'])) {
                      VALUES (
                         'Category created',
                         '" . mysqli_real_escape_string($conn, $_SESSION['username']) . "',
-                        'Category ID: $category_id',
+                        'Category: $name (Category ID: $category_id)',
                         NOW()
                      )";
 

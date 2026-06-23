@@ -62,6 +62,15 @@ if (isset($_POST['submit_user'])) {
             $companyStmt->close();
         }
 
+        $adminUsername = mysqli_real_escape_string($conn, $_SESSION['username']);
+        $newUsername = mysqli_real_escape_string($conn, $username);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('User created', '$adminUsername', 'User: $newUsername, Role: $role (User ID: $new_user_id)', NOW())
+        ";
+        mysqli_query($conn, $logQuery);
+
         setAlert('success', 'User added successfully!');
         header("Location: users.php?success=added");
         exit();
@@ -151,8 +160,7 @@ if (isset($_POST['submit_user'])) {
                                 <div class="control-group">
                                     <label class="control-label">Role:</label>
                                     <div class="controls">
-                                        <select name="role" id="roleSelect" class="span11" required>
-                                            <option value="super_admin">Super Admin</option>
+                                        <<select name="role" id="roleSelect" class="span11" required>
                                             <option value="admin" selected>Admin</option>
                                             <option value="user">User</option>
                                         </select>

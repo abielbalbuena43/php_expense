@@ -55,6 +55,14 @@ if (isset($_POST['update_payee'])) {
     ";
 
     if (mysqli_query($conn, $query)) {
+        $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('Payee updated', '$username', 'Payee: $name (Payee ID: $payee_id)', NOW())
+        ";
+        mysqli_query($conn, $logQuery);
+
         $_SESSION['alert'] = "Payee updated successfully!";
         header("Location: payees.php");
         exit();

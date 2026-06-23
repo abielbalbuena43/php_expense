@@ -40,6 +40,15 @@ if (isset($_POST['confirm_delete'])) {
     $delete_query = "DELETE FROM users WHERE user_id = $user_id";
 
     if (mysqli_query($conn, $delete_query)) {
+        $adminUsername = mysqli_real_escape_string($conn, $_SESSION['username']);
+        $deletedUsername = mysqli_real_escape_string($conn, $user['username']);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('User deleted', '$adminUsername', 'User: $deletedUsername, Role: " . $user['role'] . " (User ID: $user_id)', NOW())
+        ";
+        mysqli_query($conn, $logQuery);
+
         $_SESSION['alert'] = "User deleted successfully!";
         header("Location: users.php");
         exit();

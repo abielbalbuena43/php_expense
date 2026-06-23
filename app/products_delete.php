@@ -52,6 +52,15 @@ if (isset($_POST['confirm_delete'])) {
     $delete_query = "DELETE FROM expense_products WHERE product_id = $product_id";
 
     if (mysqli_query($conn, $delete_query)) {
+        $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+        $productName = mysqli_real_escape_string($conn, $product['product_name']);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('Product deleted', '$username', 'Product: $productName (Product ID: $product_id)', NOW())
+        ";
+        mysqli_query($conn, $logQuery);
+
         $_SESSION['alert'] = "Product deleted successfully!";
         header("Location: products.php");
         exit();
@@ -111,8 +120,8 @@ unset($_SESSION['alert']);
                                 <i class="icon-trash"></i> Confirm Delete
                             </button>
                             <a href="products.php" class="btn btn-secondary">Cancel</a>
+                        </div>
                         </form>
-                    </div>
                 </div>
 
             </div>

@@ -44,6 +44,14 @@ if (isset($_POST['update_category'])) {
     ";
 
     if (mysqli_query($conn, $query)) {
+        $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('Category updated', '$username', 'Category: $name (Category ID: $category_id)', NOW())
+        ";
+        mysqli_query($conn, $logQuery);
+
         $_SESSION['alert'] = "Category updated successfully!";
         header("Location: categories.php");
         exit();

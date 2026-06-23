@@ -53,9 +53,20 @@ if (isset($_POST['confirm_delete'])) {
 
         // Log deletion
         $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+
+        // Fetch company name for a readable log entry
+        $companyNameStmt = $conn->prepare("SELECT company_name FROM companies WHERE company_id = ?");
+        $companyNameStmt->bind_param("i", $budget['company_id']);
+        $companyNameStmt->execute();
+        $companyNameRow = $companyNameStmt->get_result()->fetch_assoc();
+        $companyNameStmt->close();
+
+        $companyName = mysqli_real_escape_string($conn, $companyNameRow['company_name'] ?? 'Unknown Company');
+        $periodLabel = $months[$budget['month']] . ' ' . $budget['year'];
+
         mysqli_query($conn, "
             INSERT INTO logs (log_action, log_user, log_details, log_date)
-            VALUES ('Budget deleted', '$username', 'Budget ID: $budget_id', NOW())
+            VALUES ('Budget deleted', '$username', 'Period: $periodLabel, Company: $companyName (Budget ID: $budget_id)', NOW())
         ");
 
         // MATCH expense_delete.php behavior
@@ -68,6 +79,7 @@ if (isset($_POST['confirm_delete'])) {
 
         $_SESSION['alert'] = "error";
 
+    }
     }
 
     $deleteStmt->close();

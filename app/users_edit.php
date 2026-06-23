@@ -102,6 +102,15 @@ if (isset($_POST['update_user'])) {
             $companyStmt->close();
         }
 
+        $adminUsername = mysqli_real_escape_string($conn, $_SESSION['username']);
+        $editedUsername = mysqli_real_escape_string($conn, $username);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('User updated', '$adminUsername', 'User: $editedUsername, Role: $role (User ID: $edit_user_id)', NOW())
+        ";
+        mysqli_query($conn, $logQuery);
+
         setAlert('success', 'User updated successfully!');
         header("Location: users.php?success=edited");
         exit();

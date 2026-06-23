@@ -12,7 +12,7 @@ $role = $_SESSION['role'];
 $isSuperAdmin = $role === 'super_admin';
 $isAdmin = $role === 'admin';
 
-if (!$isSuperAdmin && !$isAdmin) {
+if (!$isSuperAdmin) {
     header("Location: dashboard.php");
     exit();
 }

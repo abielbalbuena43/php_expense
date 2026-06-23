@@ -50,6 +50,15 @@ if (isset($_POST['confirm_delete'])) {
     $delete_query = "DELETE FROM expense_categories WHERE category_id = $category_id";
 
     if (mysqli_query($conn, $delete_query)) {
+        $username = mysqli_real_escape_string($conn, $_SESSION['username']);
+        $categoryName = mysqli_real_escape_string($conn, $category['category_name']);
+
+        $logQuery = "
+            INSERT INTO logs (log_action, log_user, log_details, log_date)
+            VALUES ('Category deleted', '$username', 'Category: $categoryName (Category ID: $category_id)', NOW())
+        ";
+        mysqli_query($conn, $logQuery);
+
         $_SESSION['alert'] = "Category deleted successfully!";
         header("Location: categories.php");
         exit();
