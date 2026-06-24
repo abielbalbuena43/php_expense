@@ -65,6 +65,7 @@ if (isset($_GET['success'])) {
    PERIOD FILTER LOGIC
 --------------------------------*/
 $selectedPeriods = [];
+$showAll = isset($_GET['all']);
 
 if (isset($_GET['month']) && isset($_GET['year'])) {
     $months = (array)$_GET['month'];
@@ -82,6 +83,16 @@ if (isset($_GET['month']) && isset($_GET['year'])) {
             ];
         }
     }
+}
+
+$hasActivePeriodFilter = !empty($selectedPeriods);
+
+// Default to current month/year unless "Show All" was explicitly requested
+if (empty($selectedPeriods) && !$showAll) {
+    $selectedPeriods[] = [
+        'month' => intval(date('m')),
+        'year' => intval(date('Y'))
+    ];
 }
 
 /* -------------------------------
@@ -523,9 +534,13 @@ Add Period
 Apply Filter
 </button>
 
-<button type="button" id="clearFilter" class="btn btn-secondary">
-Clear Filter
-</button>
+<?php if ($showAll): ?>
+<a href="expenses.php" class="btn btn-secondary">Back to This Month</a>
+<?php elseif ($hasActivePeriodFilter): ?>
+<button type="button" id="clearFilter" class="btn btn-secondary">Clear Filter</button>
+<?php else: ?>
+<a href="?all=1" class="btn btn-secondary">View All Records</a>
+<?php endif; ?>
 
 </div>
 

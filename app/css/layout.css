@@ -70,8 +70,9 @@
             gap: 8px;
             font-size: 14px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            -webkit-font-smoothing: auto;
         }
 
         .btn-success {
@@ -371,9 +372,6 @@ tr:hover .amount-col {
 }
 
 @media (max-width: 768px) {
-    .table-responsive {
-        border-radius: 8px;
-    }
     
     th {
         display: none;
@@ -413,42 +411,7 @@ tr:hover .amount-col {
 }
 
 
-        /* Responsive */
-        @media (max-width: 900px) {
-            #content {
-                margin-left: 0;
-                padding: 20px 15px;
-            }
 
-            .header-actions {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .header-actions .btn {
-                justify-content: center;
-            }
-
-            .period-row {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .period-row select {
-                min-width: 100%;
-            }
-
-            th, td {
-                padding: 12px 10px;
-                font-size: 13px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .table-responsive {
-                font-size: 13px;
-            }
-        }
 
         /* ============================================
    FILTER ACTION BUTTON ROW
@@ -621,10 +584,6 @@ tr:hover .amount-col {
     font-weight: 600;
 }
 
-.table-stats {
-    color: #666;
-    font-size: 14px;
-}
 
 .table-responsive {
     margin-bottom: 25px;
@@ -633,18 +592,6 @@ tr:hover .amount-col {
     overflow: hidden;
 }
 
-.empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: #666;
-}
-
-.empty-state i {
-    font-size: 48px;
-    display: block;
-    margin-bottom: 15px;
-    opacity: 0.5;
-}
 
 /* Pagination - Centered at bottom within form */
 .table-footer {
@@ -710,7 +657,3 @@ tr:hover .amount-col {
     min-width: auto;
 }
 
-.pagination-prev::before,
-.pagination-next::after {
-    content: '';
-}
